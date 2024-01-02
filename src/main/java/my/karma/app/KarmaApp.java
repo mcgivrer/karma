@@ -1,4 +1,4 @@
-package my.applicationname.app;
+package my.karma.app;
 
 import javax.swing.*;
 import java.awt.*;
