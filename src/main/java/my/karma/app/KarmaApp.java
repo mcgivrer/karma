@@ -31,7 +31,7 @@ public class KarmaApp extends JPanel implements KeyListener {
     private Dimension resSize;
     private int strategyBufferNb;
 
-    private String title = "WindApp";
+    private String title = "KarmaApp";
     private final Map<String, Entity> entities = new ConcurrentHashMap<>();
     private World world;
 
@@ -55,6 +55,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         private int priority = 1;
         private final Map<String, Object> attributes = new ConcurrentHashMap<>();
         private EntityType type = EntityType.RECTANGLE;
+        private List<Behavior<Entity>> behaviors = new ArrayList<>();
 
         public Entity(String name) {
             this.name = name;
@@ -147,6 +148,15 @@ public class KarmaApp extends JPanel implements KeyListener {
         public EntityType getType() {
             return type;
         }
+
+        public Entity addBehavior(Behavior<Entity> b) {
+            this.behaviors.add(b);
+            return this;
+        }
+
+        public List<Behavior<Entity>> getBehaviors() {
+            return this.behaviors;
+        }
     }
 
     public static class World {
@@ -173,10 +183,22 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
+    public interface Behavior<Entity> {
+        default void onUpdate(KarmaApp a, Entity e, long d) {
+        }
+
+        default void onInput(KarmaApp a, Entity e) {
+        }
+
+        default void onDraw(KarmaApp a, Graphics2D g, Entity e) {
+        }
+    }
+
     public KarmaApp() {
         System.out.printf("Initialization application %s (%s)%n",
                 messages.getString("app.name"),
                 messages.getString("app.version"));
+        loadConfiguration();
     }
 
     public void run(String[] args) {
@@ -187,9 +209,11 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     private void init(String[] args) {
         // get configuration values.
-        loadConfiguration(args);
+        parseCLI(args);
         // Create window
-        frame = new JFrame(title);
+        frame = new JFrame(String.format("%s (%s)",
+                messages.getString("app.name"),
+                messages.getString("app.version")));
         this.setPreferredSize(winSize);
         this.setMinimumSize(winSize);
         this.setMaximumSize(winSize);
@@ -204,8 +228,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         buffer = new BufferedImage(resSize.width, resSize.height, BufferedImage.TYPE_4BYTE_ABGR);
     }
 
-    private void loadConfiguration(String[] args) {
-        List<String> lArgs = Arrays.asList(args);
+    private void loadConfiguration() {
         try {
             config.load(this.getClass().getResourceAsStream("/config.properties"));
 
@@ -213,13 +236,17 @@ public class KarmaApp extends JPanel implements KeyListener {
                     config.entrySet().stream()
                             .map(e -> String.valueOf(e.getKey()) + "=" + String.valueOf(e.getValue()))
                             .collect(Collectors.toList());
-            parseConfig(propertyList);
+            parseArguments(propertyList);
 
         } catch (IOException e) {
             error("unable to read configuration file: %s", e.getMessage());
         }
+    }
+
+    private void parseCLI(String[] args) {
+        List<String> lArgs = Arrays.asList(args);
         if (!lArgs.isEmpty()) {
-            parseConfig(lArgs);
+            parseArguments(lArgs);
             lArgs.forEach(s -> {
                 info("- arg: %s", s);
             });
@@ -227,7 +254,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
-    private void parseConfig(List<String> lArgs) {
+    private void parseArguments(List<String> lArgs) {
         lArgs.forEach(s -> {
             String[] arg = s.split("=");
             switch (arg[0]) {
@@ -272,7 +299,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
-    private void createScene() {
+    public void createScene() {
         Entity p = new Entity("player")
                 .setPosition(160, 100)
                 .setSize(16, 16)
@@ -306,7 +333,97 @@ public class KarmaApp extends JPanel implements KeyListener {
         entities.put(e.name, e);
     }
 
-    private void draw() {
+
+    public void input() {
+        Entity p = entities.get("player");
+
+        double speedStep = p.getAttribute("speedStep");
+
+        if (keys[KeyEvent.VK_UP]) {
+            p.dy = -speedStep;
+        }
+        if (keys[KeyEvent.VK_DOWN]) {
+            p.dy = speedStep;
+
+        }
+        if (keys[KeyEvent.VK_LEFT]) {
+            p.dx = -speedStep;
+        }
+        if (keys[KeyEvent.VK_RIGHT]) {
+            p.dx = speedStep;
+        }
+        // process all input behaviors
+        entities.values().stream().filter(e -> e.isActive()).forEach(e -> {
+            if (!e.getBehaviors().isEmpty()) {
+                e.getBehaviors().forEach(b -> {
+                    b.onInput(this, e);
+                });
+            }
+        });
+    }
+
+    public void update(long d) {
+        entities.values().stream()
+                .sorted(Comparator.comparingInt(Entity::getPriority))
+                .forEach(e -> {
+                            applyPhysics(e, world, d);
+                            if (!e.getBehaviors().isEmpty()) {
+                                e.getBehaviors().forEach(b -> {
+                                    b.onUpdate(this, e, d);
+                                });
+                            }
+                        }
+                );
+    }
+
+    private void applyPhysics(Entity e, World w, long d) {
+        // apply velocity computation
+        e.x += e.dx * d;
+        e.y += e.dy * d;
+        e.updateBox();
+
+        // apply friction
+        e.dx = e.dx * e.getFriction();
+        e.dy = e.dy * e.getFriction();
+
+        // keep entity in the game area
+        keepInPlayArea(w, e);
+        detectCollision(w, e);
+    }
+
+    private void keepInPlayArea(World w, Entity e) {
+        Rectangle2D playArea = w.getPlayArea();
+        if (!playArea.contains(e.box)) {
+            if (e.x < playArea.getX()) {
+                e.dx = e.dx * -e.getElasticity();
+                e.x = playArea.getX();
+            }
+            if (e.y < playArea.getY()) {
+                e.dy = e.dy * -e.getElasticity();
+                e.y = playArea.getY();
+            }
+            if (e.x + e.w > playArea.getX() + playArea.getWidth()) {
+                e.dx = e.dx * -e.getElasticity();
+                e.x = playArea.getX() + playArea.getWidth() - e.w;
+            }
+            if (e.y + e.h > playArea.getY() + playArea.getHeight()) {
+                e.dy = e.dy * -e.getElasticity();
+                e.y = playArea.getY() + playArea.getHeight() - e.h;
+            }
+            e.updateBox();
+        }
+    }
+
+    private void detectCollision(World w, Entity e) {
+        entities.values().stream().filter(o -> e.isActive() && o.isActive() && !o.equals(e)).forEach(o -> {
+            if (e.box.intersects(o.box) || e.box.contains(o.box)) {
+                e.dx = Math.max(o.dx, e.dx) * -Math.max(e.getElasticity(), o.getElasticity());
+                e.dy = Math.max(o.dy, e.dy) * -Math.max(e.getElasticity(), o.getElasticity());
+            }
+        });
+    }
+
+    public void draw() {
         Graphics2D g = buffer.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -341,6 +458,11 @@ public class KarmaApp extends JPanel implements KeyListener {
                             g.drawOval((int) e.x, (int) e.y, e.w, e.h);
                         }
                     }
+                    if (!e.getBehaviors().isEmpty()) {
+                        e.getBehaviors().forEach(b -> {
+                            b.onDraw(this, g, e);
+                        });
+                    }
                 });
         g.dispose();
         // Copy buffer to window.
@@ -352,88 +474,6 @@ public class KarmaApp extends JPanel implements KeyListener {
                 null);
         bs.show();
         gs.dispose();
-    }
-
-    private void update(long d) {
-        entities.values().stream()
-                .sorted(Comparator.comparingInt(Entity::getPriority))
-                .forEach(e -> {
-                            applyPhysics(e, world, d);
-                        }
-                );
-    }
-
-    private void applyPhysics(Entity e, World w, long d) {
-        // apply velocity computation
-        e.x += e.dx * d;
-        e.y += e.dy * d;
-        e.updateBox();
-
-        // apply friction
-        e.dx = e.dx * e.getFriction();
-        e.dy = e.dy * e.getFriction();
-
-        // keep entity in the game area
-        keepInPlayArea(w, e);
-        detectCollision(w, e);
-    }
-
-    private void detectCollision(World w, Entity e) {
-        entities.values().stream().filter(o -> e.isActive() && o.isActive() && !o.equals(e)).forEach(o -> {
-            if (e.box.intersects(o.box) || e.box.contains(o.box)) {
-                e.dx = Math.max(o.dx, e.dx) * -Math.max(e.getElasticity(), o.getElasticity());
-                e.dy = Math.max(o.dy, e.dy) * -Math.max(e.getElasticity(), o.getElasticity());
-
-                double ex = e.x - o.x;
-                double ey = e.y - o.y;
-                if (ex < 0) {
-
-                }
-            }
-        });
-    }
-
-    private void keepInPlayArea(World w, Entity e) {
-        Rectangle2D playArea = w.getPlayArea();
-        if (!playArea.contains(e.box)) {
-            if (e.x < playArea.getX()) {
-                e.dx = e.dx * -e.getElasticity();
-                e.x = playArea.getX();
-            }
-            if (e.y < playArea.getY()) {
-                e.dy = e.dy * -e.getElasticity();
-                e.y = playArea.getY();
-            }
-            if (e.x + e.w > playArea.getX() + playArea.getWidth()) {
-                e.dx = e.dx * -e.getElasticity();
-                e.x = playArea.getX() + playArea.getWidth() - e.w;
-            }
-            if (e.y + e.h > playArea.getY() + playArea.getHeight()) {
-                e.dy = e.dy * -e.getElasticity();
-                e.y = playArea.getY() + playArea.getHeight() - e.h;
-            }
-            e.updateBox();
-        }
-    }
-
-    private void input() {
-        Entity p = entities.get("player");
-
-        double speedStep = p.getAttribute("speedStep");
-
-        if (keys[KeyEvent.VK_UP]) {
-            p.dy = -speedStep;
-        }
-        if (keys[KeyEvent.VK_DOWN]) {
-            p.dy = speedStep;
-
-        }
-        if (keys[KeyEvent.VK_LEFT]) {
-            p.dx = -speedStep;
-        }
-        if (keys[KeyEvent.VK_RIGHT]) {
-            p.dx = speedStep;
-        }
     }
 
     private void dispose() {
