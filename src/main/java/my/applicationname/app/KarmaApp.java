@@ -21,10 +21,10 @@ import java.util.stream.Collectors;
  */
 public class KarmaApp extends JPanel implements KeyListener {
 
-    private ResourceBundle messages = ResourceBundle.getBundle("i18n.messages");
-    private Properties config = new Properties();
+    private final ResourceBundle messages = ResourceBundle.getBundle("i18n.messages");
+    private final Properties config = new Properties();
     private boolean exit = false;
-    private boolean keys[] = new boolean[1024];
+    private final boolean[] keys = new boolean[1024];
     private JFrame frame;
     private BufferedImage buffer;
     private Dimension winSize;
@@ -32,7 +32,7 @@ public class KarmaApp extends JPanel implements KeyListener {
     private int strategyBufferNb;
 
     private String title = "WindApp";
-    private Map<String, Entity> entities = new ConcurrentHashMap<>();
+    private final Map<String, Entity> entities = new ConcurrentHashMap<>();
     private World world;
 
     public enum EntityType {
@@ -53,22 +53,11 @@ public class KarmaApp extends JPanel implements KeyListener {
         Color fc = Color.WHITE, bg = Color.BLUE;
         Rectangle2D box = new Rectangle2D.Double();
         private int priority = 1;
-        private Map<String, Object> attributes = new ConcurrentHashMap<>();
+        private final Map<String, Object> attributes = new ConcurrentHashMap<>();
         private EntityType type = EntityType.RECTANGLE;
 
         public Entity(String name) {
             this.name = name;
-        }
-
-        public Entity(String name, int w, int h) {
-            this(name);
-            setSize(w, h);
-        }
-
-        public Entity(String name, int x, int y, int w, int h) {
-            this(name);
-            setPosition(x, y);
-            setSize(w, h);
         }
 
         public Entity setPosition(int x, int y) {
@@ -284,7 +273,9 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     private void createScene() {
-        Entity p = new Entity("player", 160, 100, 16, 16)
+        Entity p = new Entity("player")
+                .setPosition(160, 100)
+                .setSize(16, 16)
                 .setFriction(0.995)
                 .setElasticity(0.45)
                 .setBorderColor(new Color(0.0f, 0.0f, 0.6f, 1.0f))
@@ -295,10 +286,11 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         for (int i = 0; i < 20; i++) {
             addEntity(
-                    new Entity("enemy_" + i,
-                            (int) (Math.random() * world.getPlayArea().getWidth()),
-                            (int) (Math.random() * world.getPlayArea().getHeight()),
-                            8, 8)
+                    new Entity("enemy_" + i)
+                            .setPosition(
+                                    (int) (Math.random() * world.getPlayArea().getWidth()),
+                                    (int) (Math.random() * world.getPlayArea().getHeight()))
+                            .setSize(8, 8)
                             .setBackgroundColor(Color.RED)
                             .setType(EntityType.ELLIPSE)
                             .setBorderColor(new Color(0.8f, 0.0f, 0.0f, 1.0f))
@@ -392,10 +384,10 @@ public class KarmaApp extends JPanel implements KeyListener {
                 e.dx = Math.max(o.dx, e.dx) * -Math.max(e.getElasticity(), o.getElasticity());
                 e.dy = Math.max(o.dy, e.dy) * -Math.max(e.getElasticity(), o.getElasticity());
 
-                double ex=e.x-o.x;
-                double ey = e.y-o.y;
-                if(ex<0){
-                    
+                double ex = e.x - o.x;
+                double ey = e.y - o.y;
+                if (ex < 0) {
+
                 }
             }
         });
