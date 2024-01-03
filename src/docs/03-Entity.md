@@ -44,10 +44,16 @@ We still have some method in:  the `Entity#updateBox()` will take care to align 
 and size.
 
 ```java
-public static class Entity{
+public static class Entity {
     //...
-    public void updateBox(){
-        
+    double x, y;
+    int w, h;
+    //...
+    Rectangle2D box = new Rectangle2D.Double();
+
+    //...
+    public void updateBox() {
+        box.setFrame(x, y, w, h);
     }
     //...
 }
