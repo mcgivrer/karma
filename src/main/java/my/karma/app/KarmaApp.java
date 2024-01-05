@@ -40,8 +40,15 @@ public class KarmaApp extends JPanel implements KeyListener {
         ELLIPSE
     }
 
+    public enum PhysicType {
+        NONE,
+        STATIC,
+        DYNAMIC;
+    }
+
     public static class Entity {
         private static long index = 0;
+        private PhysicType physicType = PhysicType.DYNAMIC;
         private boolean active = true;
         long id = index++;
         public String name;
@@ -156,6 +163,55 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         public List<Behavior<Entity>> getBehaviors() {
             return this.behaviors;
+        }
+
+        public Entity setPhysicType(PhysicType pt) {
+            this.physicType = pt;
+            return this;
+        }
+
+        public PhysicType getPhysicType() {
+            return physicType;
+        }
+    }
+
+    public static class TextObject extends Entity {
+        private String text;
+        private Color textColor;
+        private float fontSize = 10.0f;
+
+        public TextObject(String name) {
+            super(name);
+            setPhysicType(PhysicType.NONE);
+            this.textColor = Color.WHITE;
+            this.text = "EMPTY";
+        }
+
+        public TextObject setText(String t) {
+            this.text = t;
+            return this;
+        }
+
+        public String getText() {
+            return text;
+        }
+
+        public TextObject setTextColor(Color tc) {
+            this.textColor = tc;
+            return this;
+        }
+
+        public Color getTextColor() {
+            return this.textColor;
+        }
+
+        public TextObject setFontSize(float fs) {
+            this.fontSize = fs;
+            return this;
+        }
+
+        public float getFontSize() {
+            return fontSize;
         }
     }
 
@@ -312,6 +368,7 @@ public class KarmaApp extends JPanel implements KeyListener {
                 .addAttribute("speedStep", 0.15);
         addEntity(p);
 
+
         for (int i = 0; i < 20; i++) {
             addEntity(
                     new Entity("enemy_" + i)
@@ -328,12 +385,20 @@ public class KarmaApp extends JPanel implements KeyListener {
                                     (0.5 - Math.random()) * 0.25)
                             .setElasticity(1.0));
         }
+
+        // Add a HUD score display
+        TextObject score = (TextObject) new TextObject("score")
+                .setText("00000")
+                .setFontSize(16)
+                .setTextColor(Color.WHITE)
+                .setPosition(16, 18)
+                .setPhysicType(PhysicType.NONE);
+        addEntity(score);
     }
 
     private void addEntity(Entity e) {
         entities.put(e.name, e);
     }
-
 
     public void input() {
         Entity p = entities.get("player");
@@ -365,6 +430,7 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     public void update(long d) {
         entities.values().stream()
+                .filter(e -> !e.getPhysicType().equals(PhysicType.NONE))
                 .sorted(Comparator.comparingInt(Entity::getPriority))
                 .forEach(e -> {
                             applyPhysics(e, world, d);
@@ -379,44 +445,51 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     private void applyPhysics(Entity e, World w, long d) {
         // apply velocity computation
-        e.x += e.dx * d;
-        e.y += e.dy * d;
-        e.updateBox();
+        if (e.getPhysicType().equals(PhysicType.DYNAMIC)) {
+            e.x += e.dx * d;
+            e.y += (e.dy + (w.getGravity() * 0.1)) * d;
+            e.updateBox();
+            // apply friction
+            e.dx = e.dx * e.getFriction();
+            e.dy = e.dy * e.getFriction();
 
-        // apply friction
-        e.dx = e.dx * e.getFriction();
-        e.dy = e.dy * e.getFriction();
-
-        // keep entity in the game area
-        keepInPlayArea(w, e);
-        detectCollision(w, e);
+            // keep entity in the game area
+            keepInPlayArea(w, e);
+            detectCollision(w, e);
+        }
     }
 
     private void keepInPlayArea(World w, Entity e) {
-        Rectangle2D playArea = w.getPlayArea();
-        if (!playArea.contains(e.box)) {
-            if (e.x < playArea.getX()) {
-                e.dx = e.dx * -e.getElasticity();
-                e.x = playArea.getX();
+        if (e.getPhysicType().equals(PhysicType.DYNAMIC)) {
+            Rectangle2D playArea = w.getPlayArea();
+            if (!playArea.contains(e.box)) {
+                if (e.x < playArea.getX()) {
+                    e.dx = e.dx * -e.getElasticity();
+                    e.x = playArea.getX();
+                }
+                if (e.y < playArea.getY()) {
+                    e.dy = e.dy * -e.getElasticity();
+                    e.y = playArea.getY();
+                }
+                if (e.x + e.w > playArea.getX() + playArea.getWidth()) {
+                    e.dx = e.dx * -e.getElasticity();
+                    e.x = playArea.getX() + playArea.getWidth() - e.w;
+                }
+                if (e.y + e.h > playArea.getY() + playArea.getHeight()) {
+                    e.dy = e.dy * -e.getElasticity();
+                    e.y = playArea.getY() + playArea.getHeight() - e.h;
+                }
+                e.updateBox();
             }
-            if (e.y < playArea.getY()) {
-                e.dy = e.dy * -e.getElasticity();
-                e.y = playArea.getY();
-            }
-            if (e.x + e.w > playArea.getX() + playArea.getWidth()) {
-                e.dx = e.dx * -e.getElasticity();
-                e.x = playArea.getX() + playArea.getWidth() - e.w;
-            }
-            if (e.y + e.h > playArea.getY() + playArea.getHeight()) {
-                e.dy = e.dy * -e.getElasticity();
-                e.y = playArea.getY() + playArea.getHeight() - e.h;
-            }
-            e.updateBox();
         }
     }
 
     private void detectCollision(World w, Entity e) {
-        entities.values().stream().filter(o -> e.isActive() && o.isActive() && !o.equals(e)).forEach(o -> {
+        entities.values().stream().filter(
+                o -> e.isActive()
+                        && !o.getPhysicType().equals(PhysicType.NONE)
+                        && o.isActive()
+                        && !o.equals(e)).forEach(o -> {
             if (e.box.intersects(o.box) || e.box.contains(o.box)) {
                 e.dx = Math.max(o.dx, e.dx) * -Math.max(e.getElasticity(), o.getElasticity());
                 e.dy = Math.max(o.dy, e.dy) * -Math.max(e.getElasticity(), o.getElasticity());
@@ -447,19 +520,12 @@ public class KarmaApp extends JPanel implements KeyListener {
                 .filter(Entity::isActive)
                 .sorted(Comparator.comparingInt(Entity::getPriority))
                 .forEach(e -> {
-                    switch (e.type) {
-                        case RECTANGLE -> {
-                            g.setColor(e.bg);
-                            g.fillRect((int) e.x, (int) e.y, e.w, e.h);
-                            g.setColor(e.fc);
-                            g.drawRect((int) e.x, (int) e.y, e.w, e.h);
-
+                    switch (e.getClass().getSimpleName()) {
+                        case "TextObject" -> {
+                            drawTextObject((TextObject) e, g);
                         }
-                        case ELLIPSE -> {
-                            g.setColor(e.bg);
-                            g.fillOval((int) e.x, (int) e.y, e.w, e.h);
-                            g.setColor(e.fc);
-                            g.drawOval((int) e.x, (int) e.y, e.w, e.h);
+                        case "Entity" -> {
+                            drawEntity(e, g);
                         }
                     }
                     if (!e.getBehaviors().isEmpty()) {
@@ -472,20 +538,49 @@ public class KarmaApp extends JPanel implements KeyListener {
         g.dispose();
         // Copy buffer to window.
         BufferStrategy bs = frame.getBufferStrategy();
+
         Graphics2D gs = (Graphics2D) bs.getDrawGraphics();
+        gs.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        gs.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         gs.drawImage(buffer,
                 0, 32, winSize.width + 16, winSize.height + 32,
                 0, 0, buffer.getWidth(), buffer.getHeight(),
                 null);
 
-        gs.setColor(Color.WHITE);
         if (isDebugGreaterThan(1)) {
+            gs.setColor(new Color(0.6f, 0.6f, 0.6f, 0.50f));
+            gs.fillRect(8, winSize.height + 8, winSize.width, 32);
+            gs.setColor(Color.WHITE);
             gs.drawString(String.format("[dbg: %d | nb:%d]", debug, entities.size()), 16, winSize.height + 24);
         }
         // Switch buffer strategy
         bs.show();
         // free API
         gs.dispose();
+    }
+
+    private static void drawTextObject(TextObject to, Graphics2D g) {
+        g.setColor(to.getTextColor());
+        g.setFont(g.getFont().deriveFont(to.getFontSize()));
+        g.drawString(to.getText(), (int) to.x, (int) to.y);
+    }
+
+    private static void drawEntity(Entity e, Graphics2D g) {
+        switch (e.type) {
+            case RECTANGLE -> {
+                g.setColor(e.bg);
+                g.fillRect((int) e.x, (int) e.y, e.w, e.h);
+                g.setColor(e.fc);
+                g.drawRect((int) e.x, (int) e.y, e.w, e.h);
+
+            }
+            case ELLIPSE -> {
+                g.setColor(e.bg);
+                g.fillOval((int) e.x, (int) e.y, e.w, e.h);
+                g.setColor(e.fc);
+                g.drawOval((int) e.x, (int) e.y, e.w, e.h);
+            }
+        }
     }
 
     private boolean isDebugGreaterThan(int dgt) {
@@ -525,12 +620,21 @@ public class KarmaApp extends JPanel implements KeyListener {
     public void keyReleased(KeyEvent e) {
         keys[e.getKeyCode()] = false;
         switch (e.getKeyCode()) {
+            // [ESCAPE] quit the demo
             case KeyEvent.VK_ESCAPE -> {
                 this.exit = true;
             }
+            // [CTRL]+[Z] reset the scene
             case KeyEvent.VK_Z -> {
-                this.entities.clear();
-                createScene();
+                if (e.isControlDown()) {
+                    this.entities.clear();
+                    createScene();
+                }
+            }
+            // [D] will switch debug level from off to 1-5.
+            case KeyEvent.VK_D -> {
+                // switch debug mode to next level (1->5) or switch off (0)
+                this.debug = this.debug + 1 < 6 ? this.debug + 1 : 0;
             }
             default -> {
                 // Nothing to do.
