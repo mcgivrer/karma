@@ -34,6 +34,7 @@ public class KarmaApp extends JPanel implements KeyListener {
     private String title = "KarmaApp";
     private final Map<String, Entity> entities = new ConcurrentHashMap<>();
     private World world;
+    private int debug;
 
     public enum EntityType {
         RECTANGLE,
@@ -259,6 +260,7 @@ public class KarmaApp extends JPanel implements KeyListener {
             String[] arg = s.split("=");
             switch (arg[0]) {
                 case "app.exit" -> exit = Boolean.parseBoolean(arg[1]);
+                case "app.debug" -> debug = Integer.parseInt(arg[1]);
                 case "app.title" -> title = arg[1];
                 case "app.window.size" -> {
                     String[] res = arg[1].split("x");
@@ -424,12 +426,15 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     public void draw() {
+        // prepare rendering pipeline
         Graphics2D g = buffer.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
         // Clear display area
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, buffer.getWidth(), buffer.getHeight());
+
         // draw temporary background
         g.setColor(Color.DARK_GRAY);
         for (double dx = 0; dx < world.getPlayArea().getWidth(); dx += 16.0) {
@@ -464,6 +469,7 @@ public class KarmaApp extends JPanel implements KeyListener {
                         });
                     }
                 });
+        // free API
         g.dispose();
         // Copy buffer to window.
         BufferStrategy bs = frame.getBufferStrategy();
@@ -472,8 +478,19 @@ public class KarmaApp extends JPanel implements KeyListener {
                 0, 32, winSize.width + 16, winSize.height + 32,
                 0, 0, buffer.getWidth(), buffer.getHeight(),
                 null);
+
+        gs.setColor(Color.WHITE);
+        if (isDebugGreaterThan(1)) {
+            gs.drawString(String.format("[dbg: %d | nb:%d]", debug, entities.size()), 16, winSize.height + 24);
+        }
+        // Switch buffer strategy
         bs.show();
+        // free API
         gs.dispose();
+    }
+
+    private boolean isDebugGreaterThan(int dgt) {
+        return debug >= dgt;
     }
 
     private void dispose() {
