@@ -2,8 +2,7 @@ package my.karma.app;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+import java.awt.event.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
@@ -14,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * main class for project Karma
+ * Main class for project Karma
  *
  * @author Frédéric Delorme
  * @since 1.0.0
@@ -44,14 +43,14 @@ public class KarmaApp extends JPanel implements KeyListener {
         private static long index = 0;
         private boolean active = true;
         long id = index++;
-        String name;
-        double x, y;
-        int w, h;
-        double dx = 0, dy = 0;
+        public String name;
+        public double x, y;
+        public int w, h;
+        public double dx = 0, dy = 0;
         private double elasticity = 1.0;
         private double friction = 1.0;
-        Color fc = Color.WHITE, bg = Color.BLUE;
-        Rectangle2D box = new Rectangle2D.Double();
+        public Color fc = Color.WHITE, bg = Color.BLUE;
+        public Rectangle2D box = new Rectangle2D.Double();
         private int priority = 1;
         private final Map<String, Object> attributes = new ConcurrentHashMap<>();
         private EntityType type = EntityType.RECTANGLE;
