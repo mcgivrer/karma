@@ -32,6 +32,8 @@ KarmaApp -->  JFrame:frame
 @enduml
 ```
 
+_figure 1.1 - the KarmaApp main class_
+
 The `init(String[])` method is loading a default configuration from a properties file (config.properties) and overload
 it with possible matching arguments from the java command line
 
@@ -67,6 +69,8 @@ end
 KarmaApp -> KarmaApp:draw()
 @enduml
 ```
+
+_figure 1.2 - The physic computation process_
 
 the `applyPhysics()` first executes the first Newton law about speed on each Entity.
 

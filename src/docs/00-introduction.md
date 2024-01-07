@@ -40,4 +40,4 @@ show KarmaApp methods
 @enduml
 ```
 
-_figure 1 - The KarmaApp main class_
+_figure 0.1 - The KarmaApp main class_
