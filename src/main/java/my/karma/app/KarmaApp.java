@@ -37,6 +37,7 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     private int lives = 5;
     private int score = 0;
+    private SceneManager sceneManager;
 
     public enum EntityType {
         RECTANGLE,
@@ -246,6 +247,59 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     }
 
+    public interface Scene {
+        // <1>
+        String getTitle();
+
+        // <2>
+        void create(KarmaApp app);
+
+        // <3>
+        void initialize(KarmaApp app);
+
+        // <4>
+        void input();
+
+        // <5>
+        void update(KarmaApp app, long d);
+
+        // <6>
+        void draw(KarmaApp app, Graphics2D g);
+
+        // <7>
+        void dispose(KarmaApp app);
+    }
+
+    public static class SceneManager {
+        private KarmaApp app;
+        private Scene current;
+        private Map<String, Scene> scenes = new HashMap<>();
+
+        public SceneManager(KarmaApp app) {
+            this.app = app;
+        }
+
+        public void add(Scene scene) {
+            this.scenes.put(scene.getTitle(), scene);
+        }
+
+        public void start() {
+            if (Optional.ofNullable(current).isEmpty()) {
+                this.current = scenes.get("init");
+            }
+            this.current.create(app);
+        }
+
+        public void activate(String name) {
+            this.current = scenes.get(name);
+            start();
+        }
+
+        public Scene getCurrent() {
+            return this.current;
+        }
+    }
+
     public static class World {
 
         Rectangle2D playArea = new Rectangle2D.Double(0, 0, 1000, 1000);
@@ -313,6 +367,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         frame.requestFocus();
         // Prepare drawing buffer.
         buffer = new BufferedImage(resSize.width, resSize.height, BufferedImage.TYPE_4BYTE_ABGR);
+        sceneManager = new SceneManager(this);
     }
 
     private void loadConfiguration() {
@@ -365,6 +420,15 @@ public class KarmaApp extends JPanel implements KeyListener {
                 case "app.physic.gravity" -> {
                     world.setGravity(Double.parseDouble(arg[1]));
                 }
+                case "app.scenes.list" ->{
+                    String[] scenesStr = arg[1].split(",");
+                    for(String sceneItem:scenesStr){
+
+                    }
+                }
+                case "app.scenes.default"->{
+
+                }
 
                 default -> error("Unknown %s attribute ", s);
             }
@@ -372,6 +436,7 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     private void loop() {
+        sceneManager.start();
         createScene();
         long current = System.currentTimeMillis();
         long previous = current;
