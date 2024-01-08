@@ -35,6 +35,9 @@ public class KarmaApp extends JPanel implements KeyListener {
     private World world;
     private int debug;
 
+    private int lives = 5;
+    private int score = 0;
+
     public enum EntityType {
         RECTANGLE,
         ELLIPSE
@@ -66,6 +69,10 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         public Entity(String name) {
             this.name = name;
+        }
+
+        public void update(long d) {
+
         }
 
         public Entity setPosition(int x, int y) {
@@ -177,8 +184,10 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     public static class TextObject extends Entity {
         private String text;
+        private String format = "";
         private Color textColor;
-        private float fontSize = 10.0f;
+        private Font font;
+        private Object value;
 
         public TextObject(String name) {
             super(name);
@@ -196,6 +205,15 @@ public class KarmaApp extends JPanel implements KeyListener {
             return text;
         }
 
+        public TextObject setFormat(String f) {
+            this.format = f;
+            return this;
+        }
+
+        public String getFormat() {
+            return format;
+        }
+
         public TextObject setTextColor(Color tc) {
             this.textColor = tc;
             return this;
@@ -205,14 +223,27 @@ public class KarmaApp extends JPanel implements KeyListener {
             return this.textColor;
         }
 
-        public TextObject setFontSize(float fs) {
-            this.fontSize = fs;
+        public TextObject setFont(Font f) {
+            this.font = f;
             return this;
         }
 
-        public float getFontSize() {
-            return fontSize;
+        public Font getFont() {
+            return font;
         }
+
+        public TextObject setValue(Object v) {
+            this.value = v;
+            if (!this.format.equals("")) {
+                this.text = String.format(this.format, value);
+            }
+            return this;
+        }
+
+        public Object getValue() {
+            return value;
+        }
+
     }
 
     public static class World {
@@ -251,7 +282,7 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     public KarmaApp() {
-        System.out.printf("Initialization application %s (%s)%n",
+        info("Initialization application %s (%s)%n",
                 messages.getString("app.name"),
                 messages.getString("app.version"));
         loadConfiguration();
@@ -306,7 +337,6 @@ public class KarmaApp extends JPanel implements KeyListener {
             lArgs.forEach(s -> {
                 info("- arg: %s", s);
             });
-
         }
     }
 
@@ -357,6 +387,7 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     public void createScene() {
+        // Add a player.
         Entity p = new Entity("player")
                 .setPosition(160, 100)
                 .setSize(16, 16)
@@ -368,7 +399,7 @@ public class KarmaApp extends JPanel implements KeyListener {
                 .addAttribute("speedStep", 0.15);
         addEntity(p);
 
-
+        // Add some enemies.
         for (int i = 0; i < 20; i++) {
             addEntity(
                     new Entity("enemy_" + i)
@@ -387,13 +418,38 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
 
         // Add a HUD score display
+        Font fsc = buffer.createGraphics().getFont().deriveFont(Font.BOLD, 18.0f);
         TextObject score = (TextObject) new TextObject("score")
-                .setText("00000")
-                .setFontSize(16)
+                .setText("")
+                .setValue(0)
+                .setFormat("%05d")
+                .setFont(fsc)
                 .setTextColor(Color.WHITE)
-                .setPosition(16, 18)
+                .setPosition(10, 18)
                 .setPhysicType(PhysicType.NONE);
         addEntity(score);
+
+        Font fl = buffer.createGraphics().getFont().deriveFont(Font.BOLD, 12.0f);
+        TextObject livesTxt = (TextObject) new TextObject("lives")
+                .setText("")
+                .setFormat("%d")
+                .setValue(5)
+                .setFont(fl)
+                .setTextColor(Color.WHITE)
+                .setPosition(resSize.width - 20, 22)
+                .setPhysicType(PhysicType.NONE)
+                .setPriority(2);
+        addEntity(livesTxt);
+
+        TextObject heartTxt = (TextObject) new TextObject("heart")
+                .setText("❤")
+                .setFont(fsc)
+                .setTextColor(Color.RED)
+                .setPosition(resSize.width - 30, 18)
+                .setPhysicType(PhysicType.NONE)
+                .setPriority(1);
+        addEntity(heartTxt);
+
     }
 
     private void addEntity(Entity e) {
@@ -439,8 +495,11 @@ public class KarmaApp extends JPanel implements KeyListener {
                                     b.onUpdate(this, e, d);
                                 });
                             }
+                            e.update(d);
                         }
                 );
+        ((TextObject) entities.get("lives")).setValue(lives);
+        ((TextObject) entities.get("score")).setValue(score);
     }
 
     private void applyPhysics(Entity e, World w, long d) {
@@ -560,8 +619,14 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     private static void drawTextObject(TextObject to, Graphics2D g) {
+        g.setFont(to.getFont());
+        g.setColor(Color.BLACK);
+        for (int dx = -1; dx < 2; dx++) {
+            for (int dy = -1; dy < 2; dy++) {
+                g.drawString(to.getText(), (int) to.x + dx, (int) to.y + dy);
+            }
+        }
         g.setColor(to.getTextColor());
-        g.setFont(g.getFont().deriveFont(to.getFontSize()));
         g.drawString(to.getText(), (int) to.x, (int) to.y);
     }
 
@@ -572,7 +637,6 @@ public class KarmaApp extends JPanel implements KeyListener {
                 g.fillRect((int) e.x, (int) e.y, e.w, e.h);
                 g.setColor(e.fc);
                 g.drawRect((int) e.x, (int) e.y, e.w, e.h);
-
             }
             case ELLIPSE -> {
                 g.setColor(e.bg);
