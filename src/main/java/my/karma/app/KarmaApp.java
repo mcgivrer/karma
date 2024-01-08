@@ -1,5 +1,8 @@
 package my.karma.app;
 
+import my.karma.app.scenes.PlayScene;
+import my.karma.app.scenes.TitleScene;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -31,13 +34,29 @@ public class KarmaApp extends JPanel implements KeyListener {
     private int strategyBufferNb;
 
     private String title = "KarmaApp";
-    private final Map<String, Entity> entities = new ConcurrentHashMap<>();
     private World world;
     private int debug;
-
-    private int lives = 5;
-    private int score = 0;
     private SceneManager sceneManager;
+
+    public Dimension getScreenSize() {
+        return resSize;
+    }
+
+    public World getWorld() {
+        return world;
+    }
+
+    public boolean isKeyPressed(int vkKeyCode) {
+        return keys[vkKeyCode];
+    }
+
+    public String getMessage(String keyMsg) {
+        return messages.getString(keyMsg);
+    }
+
+    public SceneManager getSceneManager() {
+        return sceneManager;
+    }
 
     public enum EntityType {
         RECTANGLE,
@@ -47,7 +66,7 @@ public class KarmaApp extends JPanel implements KeyListener {
     public enum PhysicType {
         NONE,
         STATIC,
-        DYNAMIC;
+        DYNAMIC
     }
 
     public static class Entity {
@@ -183,6 +202,15 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
+    public static class GridObject extends Entity {
+        private int stepW = 16, stepH = 16;
+
+        public GridObject(String name) {
+            super(name);
+        }
+
+    }
+
     public static class TextObject extends Entity {
         private String text;
         private String format = "";
@@ -248,26 +276,25 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     public interface Scene {
-        // <1>
         String getTitle();
 
-        // <2>
         void create(KarmaApp app);
 
-        // <3>
         void initialize(KarmaApp app);
 
-        // <4>
-        void input();
+        void input(KarmaApp app);
 
-        // <5>
         void update(KarmaApp app, long d);
 
-        // <6>
         void draw(KarmaApp app, Graphics2D g);
 
-        // <7>
         void dispose(KarmaApp app);
+
+        Collection<Entity> getEntities();
+
+        Entity getEntity(String entityName);
+
+        void clearEntities();
     }
 
     public static class SceneManager {
@@ -285,14 +312,24 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         public void start() {
             if (Optional.ofNullable(current).isEmpty()) {
-                this.current = scenes.get("init");
+                start("init");
             }
+        }
+
+        public void start(String sceneName) {
+            if (Optional.ofNullable(current).isEmpty() || !current.getTitle().equals(sceneName)) {
+                this.current = scenes.get(sceneName);
+            }
+            this.current.clearEntities();
             this.current.create(app);
+            this.current.initialize(app);
         }
 
         public void activate(String name) {
-            this.current = scenes.get(name);
-            start();
+            if (Optional.ofNullable(this.current).isPresent()) {
+                this.current.dispose(app);
+            }
+            start(name);
         }
 
         public Scene getCurrent() {
@@ -368,6 +405,9 @@ public class KarmaApp extends JPanel implements KeyListener {
         // Prepare drawing buffer.
         buffer = new BufferedImage(resSize.width, resSize.height, BufferedImage.TYPE_4BYTE_ABGR);
         sceneManager = new SceneManager(this);
+
+        sceneManager.add(new TitleScene(this));
+        sceneManager.add(new PlayScene(this));
     }
 
     private void loadConfiguration() {
@@ -420,13 +460,13 @@ public class KarmaApp extends JPanel implements KeyListener {
                 case "app.physic.gravity" -> {
                     world.setGravity(Double.parseDouble(arg[1]));
                 }
-                case "app.scenes.list" ->{
+                case "app.scenes.list" -> {
                     String[] scenesStr = arg[1].split(",");
-                    for(String sceneItem:scenesStr){
+                    for (String sceneItem : scenesStr) {
 
                     }
                 }
-                case "app.scenes.default"->{
+                case "app.scenes.default" -> {
 
                 }
 
@@ -436,8 +476,7 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     private void loop() {
-        sceneManager.start();
-        createScene();
+        sceneManager.start("title");
         long current = System.currentTimeMillis();
         long previous = current;
         long delta = 0;
@@ -451,106 +490,13 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
-    public void createScene() {
-        // Add a player.
-        Entity p = new Entity("player")
-                .setPosition(160, 100)
-                .setSize(16, 16)
-                .setFriction(0.995)
-                .setElasticity(0.45)
-                .setBorderColor(new Color(0.0f, 0.0f, 0.6f, 1.0f))
-                .setBackgroundColor(Color.BLUE)
-                .setPriority(1)
-                .addAttribute("speedStep", 0.15);
-        addEntity(p);
-
-        // Add some enemies.
-        for (int i = 0; i < 20; i++) {
-            addEntity(
-                    new Entity("enemy_" + i)
-                            .setPosition(
-                                    (int) (Math.random() * world.getPlayArea().getWidth()),
-                                    (int) (Math.random() * world.getPlayArea().getHeight()))
-                            .setSize(8, 8)
-                            .setBackgroundColor(Color.RED)
-                            .setType(EntityType.ELLIPSE)
-                            .setBorderColor(new Color(0.8f, 0.0f, 0.0f, 1.0f))
-                            .setPriority(-i)
-                            .setVelocity(
-                                    (0.5 - Math.random()) * 0.25,
-                                    (0.5 - Math.random()) * 0.25)
-                            .setElasticity(1.0));
-        }
-
-        // Add a HUD score display
-        Font fsc = buffer.createGraphics().getFont().deriveFont(Font.BOLD, 18.0f);
-        TextObject score = (TextObject) new TextObject("score")
-                .setText("")
-                .setValue(0)
-                .setFormat("%05d")
-                .setFont(fsc)
-                .setTextColor(Color.WHITE)
-                .setPosition(10, 18)
-                .setPhysicType(PhysicType.NONE);
-        addEntity(score);
-
-        Font fl = buffer.createGraphics().getFont().deriveFont(Font.BOLD, 12.0f);
-        TextObject livesTxt = (TextObject) new TextObject("lives")
-                .setText("")
-                .setFormat("%d")
-                .setValue(5)
-                .setFont(fl)
-                .setTextColor(Color.WHITE)
-                .setPosition(resSize.width - 20, 22)
-                .setPhysicType(PhysicType.NONE)
-                .setPriority(2);
-        addEntity(livesTxt);
-
-        TextObject heartTxt = (TextObject) new TextObject("heart")
-                .setText("❤")
-                .setFont(fsc)
-                .setTextColor(Color.RED)
-                .setPosition(resSize.width - 30, 18)
-                .setPhysicType(PhysicType.NONE)
-                .setPriority(1);
-        addEntity(heartTxt);
-
-    }
-
-    private void addEntity(Entity e) {
-        entities.put(e.name, e);
-    }
-
     public void input() {
-        Entity p = entities.get("player");
-
-        double speedStep = p.getAttribute("speedStep");
-
-        if (keys[KeyEvent.VK_UP]) {
-            p.dy = -speedStep;
-        }
-        if (keys[KeyEvent.VK_DOWN]) {
-            p.dy = speedStep;
-
-        }
-        if (keys[KeyEvent.VK_LEFT]) {
-            p.dx = -speedStep;
-        }
-        if (keys[KeyEvent.VK_RIGHT]) {
-            p.dx = speedStep;
-        }
-        // process all input behaviors
-        entities.values().stream().filter(e -> e.isActive()).forEach(e -> {
-            if (!e.getBehaviors().isEmpty()) {
-                e.getBehaviors().forEach(b -> {
-                    b.onInput(this, e);
-                });
-            }
-        });
+        sceneManager.getCurrent().input(this);
     }
 
     public void update(long d) {
-        entities.values().stream()
+        Collection<Entity> entities = sceneManager.getCurrent().getEntities();
+        entities.stream()
                 .filter(e -> !e.getPhysicType().equals(PhysicType.NONE))
                 .sorted(Comparator.comparingInt(Entity::getPriority))
                 .forEach(e -> {
@@ -563,8 +509,7 @@ public class KarmaApp extends JPanel implements KeyListener {
                             e.update(d);
                         }
                 );
-        ((TextObject) entities.get("lives")).setValue(lives);
-        ((TextObject) entities.get("score")).setValue(score);
+        sceneManager.getCurrent().update(this, d);
     }
 
     private void applyPhysics(Entity e, World w, long d) {
@@ -609,7 +554,8 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     private void detectCollision(World w, Entity e) {
-        entities.values().stream().filter(
+        Collection<Entity> entities = sceneManager.getCurrent().getEntities();
+        entities.stream().filter(
                 o -> e.isActive()
                         && !o.getPhysicType().equals(PhysicType.NONE)
                         && o.isActive()
@@ -631,16 +577,10 @@ public class KarmaApp extends JPanel implements KeyListener {
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, buffer.getWidth(), buffer.getHeight());
 
-        // draw temporary background
-        g.setColor(Color.DARK_GRAY);
-        for (double dx = 0; dx < world.getPlayArea().getWidth(); dx += 16.0) {
-            g.drawRect((int) dx, 0, 16, (int) world.getPlayArea().getHeight());
-        }
-        for (double dy = 0; dy < world.getPlayArea().getHeight(); dy += 16) {
-            g.drawRect(0, (int) dy, (int) world.getPlayArea().getWidth(), 16);
-        }
         // Draw things
-        entities.values().stream()
+
+        Collection<Entity> entities = sceneManager.getCurrent().getEntities();
+        entities.stream()
                 .filter(Entity::isActive)
                 .sorted(Comparator.comparingInt(Entity::getPriority))
                 .forEach(e -> {
@@ -651,6 +591,9 @@ public class KarmaApp extends JPanel implements KeyListener {
                         case "Entity" -> {
                             drawEntity(e, g);
                         }
+                        case "GridObject" -> {
+                            drawGridObject((GridObject) e, g);
+                        }
                     }
                     if (!e.getBehaviors().isEmpty()) {
                         e.getBehaviors().forEach(b -> {
@@ -658,11 +601,12 @@ public class KarmaApp extends JPanel implements KeyListener {
                         });
                     }
                 });
+        sceneManager.getCurrent().draw(this, g);
         // free API
         g.dispose();
         // Copy buffer to window.
         BufferStrategy bs = frame.getBufferStrategy();
-
+        // configure renderer for antialiasing.
         Graphics2D gs = (Graphics2D) bs.getDrawGraphics();
         gs.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         gs.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -681,6 +625,17 @@ public class KarmaApp extends JPanel implements KeyListener {
         bs.show();
         // free API
         gs.dispose();
+    }
+
+    private void drawGridObject(GridObject go, Graphics2D g) {
+        // draw temporary background
+        g.setColor(go.fc);
+        for (double dx = 0; dx < world.getPlayArea().getWidth(); dx += go.stepW) {
+            g.drawRect((int) dx, 0, 16, (int) world.getPlayArea().getHeight());
+        }
+        for (double dy = 0; dy < world.getPlayArea().getHeight(); dy += go.stepH) {
+            g.drawRect(0, (int) dy, (int) world.getPlayArea().getWidth(), 16);
+        }
     }
 
     private static void drawTextObject(TextObject to, Graphics2D g) {
@@ -756,8 +711,8 @@ public class KarmaApp extends JPanel implements KeyListener {
             // [CTRL]+[Z] reset the scene
             case KeyEvent.VK_Z -> {
                 if (e.isControlDown()) {
-                    this.entities.clear();
-                    createScene();
+                    sceneManager.getCurrent().clearEntities();
+                    sceneManager.getCurrent().create(this);
                 }
             }
             // [D] will switch debug level from off to 1-5.
@@ -769,6 +724,10 @@ public class KarmaApp extends JPanel implements KeyListener {
                 // Nothing to do.
             }
         }
+    }
+
+    public Graphics2D getGraphics() {
+        return buffer.createGraphics();
     }
 
     public static void main(String[] argc) {
