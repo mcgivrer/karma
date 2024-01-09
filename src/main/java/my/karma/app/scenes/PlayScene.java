@@ -34,9 +34,22 @@ public class PlayScene extends AbstractScene {
                 .addAttribute("speedStep", 0.15);
         addEntity(p);
 
+        KarmaApp.Entity enemies = new KarmaApp.Entity("enemy_0")
+                .setPosition(
+                        (int) (Math.random() * getWorld().getPlayArea().getWidth()),
+                        (int) (Math.random() * getWorld().getPlayArea().getHeight()))
+                .setSize(8, 8)
+                .setBackgroundColor(Color.RED)
+                .setType(KarmaApp.EntityType.ELLIPSE)
+                .setBorderColor(new Color(0.8f, 0.0f, 0.0f, 1.0f))
+                .setPriority(0)
+                .setVelocity(
+                        (0.5 - Math.random()) * 0.25,
+                        (0.5 - Math.random()) * 0.25)
+                .setElasticity(1.0);
         // Add some enemies.
-        for (int i = 0; i < 20; i++) {
-            addEntity(
+        for (int i = 1; i < 20; i++) {
+            enemies.add(
                     new KarmaApp.Entity("enemy_" + i)
                             .setPosition(
                                     (int) (Math.random() * getWorld().getPlayArea().getWidth()),
@@ -51,6 +64,7 @@ public class PlayScene extends AbstractScene {
                                     (0.5 - Math.random()) * 0.25)
                             .setElasticity(1.0));
         }
+        addEntity(enemies);
 
         // Add a HUD score display
         Font fsc = app.getGraphics().getFont().deriveFont(Font.BOLD, 18.0f);

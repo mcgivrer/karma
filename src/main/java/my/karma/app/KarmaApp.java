@@ -75,24 +75,51 @@ public class KarmaApp extends JPanel implements KeyListener {
         private boolean active = true;
         long id = index++;
         public String name;
+
         public double x, y;
         public int w, h;
+        public Rectangle2D box = new Rectangle2D.Double();
+        public double centerX, centerY;
+
         public double dx = 0, dy = 0;
         private double elasticity = 1.0;
         private double friction = 1.0;
+        private double mass = 1.0;
+
         public Color fc = Color.WHITE, bg = Color.BLUE;
-        public Rectangle2D box = new Rectangle2D.Double();
         private int priority = 1;
         private final Map<String, Object> attributes = new ConcurrentHashMap<>();
         private EntityType type = EntityType.RECTANGLE;
         private List<Behavior<Entity>> behaviors = new ArrayList<>();
 
+        private List<Entity> child = new ArrayList<>();
+        private long duration = -1;
+        private long life = 0;
+
         public Entity(String name) {
             this.name = name;
         }
 
-        public void update(long d) {
+        public Entity add(Entity c) {
+            child.add(c);
+            return this;
+        }
 
+        public Collection<Entity> getChild() {
+            return child;
+        }
+
+        public void update(long d) {
+            updateBox();
+            if (duration != -1 && isActive()) {
+                life += d;
+                if (life > duration) {
+                    life = 0;
+                    active = false;
+                }
+            }
+            if (!child.isEmpty())
+                child.stream().filter(Entity::isActive).forEach(c -> c.update(d));
         }
 
         public Entity setPosition(int x, int y) {
@@ -111,6 +138,8 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         public void updateBox() {
             box.setFrame(x, y, w, h);
+            centerX = x + (0.5 * w);
+            centerY = y + (0.5 * h);
         }
 
         public Entity setBorderColor(Color frontColor) {
@@ -199,6 +228,10 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         public PhysicType getPhysicType() {
             return physicType;
+        }
+
+        public String toString() {
+            return name + "[" + id + "]";
         }
     }
 
@@ -508,12 +541,11 @@ public class KarmaApp extends JPanel implements KeyListener {
                 .sorted(Comparator.comparingInt(Entity::getPriority))
                 .forEach(e -> {
                             applyPhysics(e, world, d);
-                            if (!e.getBehaviors().isEmpty()) {
-                                e.getBehaviors().forEach(b -> {
-                                    b.onUpdate(this, e, d);
-                                });
-                            }
+                            // update the entity (lifetime and active status)
                             e.update(d);
+                            // apply physic computation on children (if any)
+                            e.getChild().stream().filter(Entity::isActive).forEach(c -> applyPhysics(c, world, d));
+
                         }
                 );
         sceneManager.getCurrent().update(this, d);
@@ -529,6 +561,11 @@ public class KarmaApp extends JPanel implements KeyListener {
             e.dx = e.dx * e.getFriction();
             e.dy = e.dy * e.getFriction();
 
+            if (!e.getBehaviors().isEmpty()) {
+                e.getBehaviors().forEach(b -> {
+                    b.onUpdate(this, e, d);
+                });
+            }
             // keep entity in the game area
             keepInPlayArea(w, e);
             detectCollision(w, e);
@@ -591,22 +628,8 @@ public class KarmaApp extends JPanel implements KeyListener {
                 .filter(Entity::isActive)
                 .sorted(Comparator.comparingInt(Entity::getPriority))
                 .forEach(e -> {
-                    switch (e.getClass().getSimpleName()) {
-                        case "TextObject" -> {
-                            drawTextObject((TextObject) e, g);
-                        }
-                        case "Entity" -> {
-                            drawEntity(e, g);
-                        }
-                        case "GridObject" -> {
-                            drawGridObject((GridObject) e, g);
-                        }
-                    }
-                    if (!e.getBehaviors().isEmpty()) {
-                        e.getBehaviors().forEach(b -> {
-                            b.onDraw(this, g, e);
-                        });
-                    }
+                    draw(e, g);
+                    e.getChild().forEach(c -> draw(c, g));
                 });
         sceneManager.getCurrent().draw(this, g);
         // free API
@@ -632,6 +655,25 @@ public class KarmaApp extends JPanel implements KeyListener {
         bs.show();
         // free API
         gs.dispose();
+    }
+
+    private void draw(Entity e, Graphics2D g) {
+        switch (e.getClass().getSimpleName()) {
+            case "TextObject" -> {
+                drawTextObject((TextObject) e, g);
+            }
+            case "Entity" -> {
+                drawEntity(e, g);
+            }
+            case "GridObject" -> {
+                drawGridObject((GridObject) e, g);
+            }
+        }
+        if (!e.getBehaviors().isEmpty()) {
+            e.getBehaviors().forEach(b -> {
+                b.onDraw(this, g, e);
+            });
+        }
     }
 
     private void drawGridObject(GridObject go, Graphics2D g) {
