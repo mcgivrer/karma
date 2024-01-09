@@ -12,7 +12,7 @@ A game oriented java project proposing basic implementation for
 
 ## Description
 
-The project is composed of one main class `KarmaApp` that contains sub classes.
+The project is composed of one main class `KarmaApp` that contains subclasses.
 
 ```plantuml
 @startuml
@@ -29,24 +29,35 @@ class KarmaApp extends JPanel implements KeyListener{
   -dispose()
   -loop()
 }
+package JDK{
+}
 show KarmaApp methods 
 enum EntityType
 class Entity
 class World
+class GridObject extends Entity
+class TextObject extends Entity
 interface Behavior
+interface Scene
+class SceneManager
+class AbstractScene implements Scene
 
+AbstractScene "1" --> "n" Entity:entities
+AbstractScene -> World:world
+AbstractScene "1"-->"n" Behavior:behaviors
+Entity "1" -> "n" Behavior:behaviors
+Entity -> EntityType:type
 KarmaApp --> BufferedImage:buffer
 KarmaApp -->  JFrame:frame
-KarmaApp --> World:world
-KarmaApp "1" --> "n" Entity:entities
-Entity --> EntityType:type
-Entity "1" --> "n" Behavior:behaviors
+KarmaApp --> SceneManager:sceneManager
+SceneManager "1"->"n" Scene:scenes
+
 @enduml
 ```
 
 ## Build
 
-To build the project, just execute the following command line :
+To build the project, execute the following command line :
 
 ```bash
 ./build.sh a
@@ -54,7 +65,7 @@ To build the project, just execute the following command line :
 
 ## Run
 
-To execute the build project, just run it with :
+To execute the build project, run it with :
 
 ```bash
 ./build.sh r
