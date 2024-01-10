@@ -135,7 +135,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         public Rectangle2D box = new Rectangle2D.Double();
         private Vector2D center;
 
-        private Material material = new Material(1.0, 1.0, 1.0);
+        private Material material = Material.DEFAULT;
         private double mass = 1.0;
 
         public Color fc = Color.WHITE, bg = Color.BLUE;
@@ -315,6 +315,8 @@ public class KarmaApp extends JPanel implements KeyListener {
         public double friction;
         public double density;
         public double elasticity;
+
+        public static Material DEFAULT = new Material(1.0, 1.0, 0.0);
 
         public Material(double friction, double density, double elasticity) {
             this.friction = friction;
@@ -633,41 +635,43 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     public void update(long d) {
         Collection<Entity> entities = sceneManager.getCurrent().getEntities();
-        entities.stream()
-                .filter(e -> !e.getPhysicType().equals(PhysicType.NONE))
-                .sorted(Comparator.comparingInt(Entity::getPriority))
-                .forEach(e -> {
-                            applyPhysics(e, world, d);
-                            // update the entity (lifetime and active status)
-                            e.update(d);
-                            // apply physic computation on children (if any)
-                            e.getChild().stream().filter(Entity::isActive).forEach(c -> applyPhysics(c, world, d));
+        entities.forEach(e -> {
+            if (!e.getPhysicType().equals(PhysicType.NONE)) {
 
-                        }
-                );
+                applyPhysics(e, world, d);
+                detectCollision(world, e, d);
+                // update the entity (lifetime and active status)
+                e.update(d);
+                e.updateBox();
+            }
+        });
         sceneManager.getCurrent().update(this, d);
     }
 
     private void applyPhysics(Entity e, World w, long d) {
         // apply velocity computation
         if (e.getPhysicType().equals(PhysicType.DYNAMIC)) {
+            // compute position according to velocity
             e.position = e.position.add(e.getVelocity().multiply(d))
                     .add(new Vector2D(0, (w.getGravity() * 0.1)).multiply(d));
             e.updateBox();
             // apply friction
-            e.velocity = e.velocity.multiply(e.getMaterial().friction);
-
+            e.setVelocity(e.getVelocity().multiply(e.getMaterial().friction));
+            // apply possible behavior#update
             if (!e.getBehaviors().isEmpty()) {
                 e.getBehaviors().forEach(b -> {
                     b.onUpdate(this, e, d);
+                    e.updateBox();
                 });
             }
             // keep entity in the game area
             keepInPlayArea(w, e);
+            // update the box for the entity.
             e.updateBox();
+            // apply physic computation on children (if any)
+            e.getChild().stream().filter(Entity::isActive).forEach(c -> applyPhysics(c, world, d));
         }
 
-        detectCollision(w, e, d);
     }
 
     private void keepInPlayArea(World w, Entity e) {
@@ -698,46 +702,25 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     private void detectCollision(World w, Entity e, double d) {
         Collection<Entity> entities = sceneManager.getCurrent().getEntities();
-        entities.stream().filter(
-                o -> e.isActive()
-                        && !o.getPhysicType().equals(PhysicType.NONE)
-                        && o.isActive()
-                        && !o.equals(e)).forEach(o -> {
-            if (isColliding(e, o)) {
-                resolveCollision(e, o);
+        entities.forEach(o -> {
+            if (e.isActive() && !o.equals(e) && o.isActive()
+                    && !o.getPhysicType().equals(PhysicType.NONE)) {
+                handleCollision(e, o);
             }
         });
     }
 
-    public boolean isColliding(Entity entity, Entity otherEntity) {
-        // Calculez les positions actuelles et futures des entités
-        Vector2D currentPosition1 = entity.getPosition();
-        Vector2D futurePosition1 = currentPosition1.add(entity.getVelocity());
-
-        Vector2D currentPosition2 = otherEntity.getPosition();
-        Vector2D futurePosition2 = currentPosition2.add(otherEntity.getVelocity());
-
-        // Calculez les limites des boîtes englobantes pour les deux entités
-        double left1 = futurePosition1.getX();
-        double right1 = left1 + entity.w;
-        double top1 = futurePosition1.getY();
-        double bottom1 = top1 + entity.h;
-
-        double left2 = futurePosition2.getX();
-        double right2 = left2 + otherEntity.w;
-        double top2 = futurePosition2.getY();
-        double bottom2 = top2 + otherEntity.h;
-
-        // Vérifiez si les boîtes englobantes se chevauchent
-        if (right1 < left2 || left1 > right2 || bottom1 < top2 || top1 > bottom2) {
-            return false; // Pas de collision détectée
+    private void handleCollision(Entity e, Entity o) {
+        if (e.box.intersects(o.box)) { //isColliding(e, o)
+            debug("collision between '%s' and '%s'", e, o);
+            resolveCollision(e, o);
+            o.getChild().stream().forEach(c -> handleCollision(e, c));
+            e.updateBox();
         }
-
-        return true; // Collision détectée
     }
 
     private void resolveCollision(Entity entity1, Entity entity2) {
-// Déterminer le vecteur normal de la collision
+        // Déterminer le vecteur normal de la collision
         Vector2D normal = calculateCollisionNormal(entity1, entity2);
 
         // Résoudre la collision en fonction du vecteur normal, de l'élasticité et de la friction
@@ -756,9 +739,9 @@ public class KarmaApp extends JPanel implements KeyListener {
         double velocityAlongNormal = relativeVelocity.dot(normal);
 
         // Ne pas résoudre la collision si les vitesses sont en train de s'éloigner l'une de l'autre
-        if (velocityAlongNormal > 0) {
-            return;
-        }
+        //if (velocityAlongNormal > 0) {
+        //    return;
+        //}
 
         // Calculer l'impulsion scalaire
         double j = -(1 + elasticity) * velocityAlongNormal;
@@ -790,35 +773,51 @@ public class KarmaApp extends JPanel implements KeyListener {
             if (isEntity1Dynamic && isEntity2Static) {
                 // TODO: buggy pour la detection de plateforme
                 // Dynamic vs Static: Correction basée sur la plus grande composante de la vitesse de l'entité dynamique
-                applyPositionCorrection(entity1, entity2, velocity1, normal, penetrationDepth);
+                applyPositionCorrection(entity1, entity2, velocity1, normal);
+                entity1.updateBox();
             } else if (isEntity1Static && isEntity2Dynamic) {
                 // TODO: buggy pour la detection de plateforme
                 // Static vs Dynamic: Correction basée sur la plus grande composante de la vitesse de l'entité dynamique
-                applyPositionCorrection(entity2, entity1, velocity2, normal, penetrationDepth);
+                applyPositionCorrection(entity2, entity1, velocity2, normal);
+                entity2.updateBox();
             } else if (isEntity1Dynamic && isEntity2Dynamic) {
                 // Dynamic vs Dynamic: Correction partagée
                 double totalMass = entity1.getMass() + entity2.getMass();
                 entity1.setPosition(entity1.getPosition().add(normal.multiply(penetrationDepth * (entity2.getMass() / totalMass))));
                 entity2.setPosition(entity2.getPosition().subtract(normal.multiply(penetrationDepth * (entity1.getMass() / totalMass))));
+                entity1.updateBox();
+                entity2.updateBox();
             }
+        } else {
+            debug("No collision between '%s' and '%s'", entity1, entity2);
         }
     }
 
-    private void applyPositionCorrection(Entity dynEntity, Entity statEntity, Vector2D velocity, Vector2D normal, double penetrationDepth) {
-        if (normal.y > 0) {
-            dynEntity.getVelocity().y = 0;
-            dynEntity.getPosition().y = statEntity.getPosition().y - dynEntity.h;
-            // TODO: appliquer une correction sur l'axe X pour gérer un glissement.
-        } else {
-            boolean correctX = Math.abs(velocity.x) > Math.abs(velocity.y);
-            if (correctX) {
-                // Correction sur l'axe X
-                dynEntity.setPosition(dynEntity.getPosition().add(new Vector2D(normal.x * penetrationDepth, 0)));
+    private void applyPositionCorrection(Entity dynEntity, Entity statEntity, Vector2D velocity, Vector2D normal) {
+        double sideThreshold = 4;
+        // Calculer la profondeur de la pénétration
+        double overlapX = Math.min(dynEntity.box.getMaxX(), statEntity.box.getMaxX()) - Math.max(dynEntity.box.getMinX(), statEntity.box.getMinX());
+        double overlapY = Math.min(dynEntity.box.getMaxY(), statEntity.box.getMaxY()) - Math.max(dynEntity.box.getMinY(), statEntity.box.getMinY());
+
+        // Calculer la direction de la collision
+        double velocityX = statEntity.box.getCenterX() - dynEntity.box.getCenterX();
+        double velocityY = statEntity.box.getCenterY() - dynEntity.box.getCenterY();
+
+        // Réajuster les positions des rectangles pour les séparer
+        if (Math.abs(overlapX) < Math.abs(overlapY)) {
+            if (velocityX > 0) {
+                dynEntity.getPosition().x = (statEntity.box.getX() - dynEntity.box.getWidth());
             } else {
-                // Correction sur l'axe Y
-                dynEntity.setPosition(dynEntity.getPosition().add(new Vector2D(0, normal.y * penetrationDepth)));
+                dynEntity.getPosition().x = (statEntity.box.getX() + statEntity.box.getWidth());
+            }
+        } else {
+            if (velocityY > 0) {
+                dynEntity.getPosition().y = (statEntity.box.getY() - dynEntity.box.getHeight());
+            } else {
+                dynEntity.getPosition().y = (statEntity.box.getY() + statEntity.box.getHeight());
             }
         }
+        dynEntity.updateBox();
     }
 
     private double calculatePenetrationDepth(Entity entity1, Entity entity2, Vector2D normal) {

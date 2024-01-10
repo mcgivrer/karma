@@ -24,9 +24,10 @@ public class PlayScene extends AbstractScene {
     public void create(KarmaApp app) {
         // Add a player.
         KarmaApp.Entity p = new KarmaApp.Entity("player")
-                .setPosition(160, 100)
+                .setPosition(160, 30)
+                .setPhysicType(KarmaApp.PhysicType.DYNAMIC)
                 .setSize(16, 16)
-                .setMaterial(new KarmaApp.Material(0.998, 1.0, 0.25))
+                .setMaterial(new KarmaApp.Material(0.12, 1.0, 0.25))
                 .setMass(20.0)
                 .setBorderColor(new Color(0.0f, 0.0f, 0.6f, 1.0f))
                 .setBackgroundColor(Color.BLUE)
@@ -35,15 +36,15 @@ public class PlayScene extends AbstractScene {
         addEntity(p);
 
         KarmaApp.Entity platform1 = new KarmaApp.Entity("platform_01")
-                .setPosition(100,100)
-                .setSize(100, 16)
+                .setPosition(100, 100)
+                .setSize(100, 32)
                 .setPhysicType(KarmaApp.PhysicType.STATIC)
                 .setType(KarmaApp.EntityType.RECTANGLE)
                 .setMass(4.0)
                 .setBorderColor(Color.GRAY)
                 .setBackgroundColor(Color.DARK_GRAY)
                 .setPriority(10)
-                .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.0));
+                .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.1));
         addEntity(platform1);
 
         KarmaApp.Entity enemies = new KarmaApp.Entity("enemy_0")
@@ -51,6 +52,7 @@ public class PlayScene extends AbstractScene {
                         (int) (Math.random() * getWorld().getPlayArea().getWidth()),
                         (int) (Math.random() * getWorld().getPlayArea().getHeight()))
                 .setSize(8, 8)
+                .setPhysicType(KarmaApp.PhysicType.DYNAMIC)
                 .setBackgroundColor(Color.RED)
                 .setType(KarmaApp.EntityType.ELLIPSE)
                 .setBorderColor(new Color(0.8f, 0.0f, 0.0f, 1.0f))
@@ -68,6 +70,7 @@ public class PlayScene extends AbstractScene {
                                     (int) (Math.random() * getWorld().getPlayArea().getWidth()),
                                     (int) (Math.random() * getWorld().getPlayArea().getHeight()))
                             .setSize(8, 8)
+                            .setPhysicType(KarmaApp.PhysicType.DYNAMIC)
                             .setBackgroundColor(Color.RED)
                             .setType(KarmaApp.EntityType.ELLIPSE)
                             .setBorderColor(new Color(0.8f, 0.0f, 0.0f, 1.0f))
