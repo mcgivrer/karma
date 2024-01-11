@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 /**
@@ -27,6 +28,8 @@ public class KarmaApp extends JPanel implements KeyListener {
     private static final double MAX_VELOCITY = 10.0;
     private final ResourceBundle messages = ResourceBundle.getBundle("i18n.messages");
     private final Properties config = new Properties();
+    private final int maxEntitiesInSpace = 2;
+    private final int maxLevelsInSpace = 4;
     private boolean exit = false;
     private final boolean[] keys = new boolean[1024];
     private JFrame frame;
@@ -39,6 +42,7 @@ public class KarmaApp extends JPanel implements KeyListener {
     private World world;
     private int debug;
     private SceneManager sceneManager;
+    private SpacePartition spacePartition;
 
     public Dimension getScreenSize() {
         return resSize;
@@ -325,6 +329,217 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
+    public class SpacePartition extends Rectangle2D.Double {
+        private int maxObjectsPerNode = 10;
+        private int maxTreeLevels = 5;
+
+        private SpacePartition root;
+
+        private int level;
+        private List<Entity> objects;
+        private SpacePartition[] nodes;
+
+        /**
+         * Create a new {@link SpacePartition} with a depth level and its defined rectangle area.
+         *
+         * @param pLevel  the  depth level for this {@link SpacePartition}
+         * @param pBounds the Rectangle area covered by this {@link SpacePartition}.
+         */
+        public SpacePartition(int pLevel, Rectangle pBounds) {
+            level = pLevel;
+            objects = new ArrayList<>();
+            setRect(pBounds);
+            nodes = new SpacePartition[4];
+        }
+
+        /**
+         * Initialize the {@link SpacePartition} according to the defined configuration.
+         * <p>
+         * The configuration file will provide 2 parameters:
+         *     <ul>
+         *         <li><code>app.physic.space.max.entities</code> is the maximum number of entities that a SpacePartition node can contain,</li>
+         *         <li><code>app.physic.space.max.levels</code> is the max Depth level the tree hierarchy can contain.</li>
+         *     </ul>
+         * </p>
+         *
+         * @param app the parent {@link KarmaApp} instance.
+         */
+        public SpacePartition(KarmaApp app) {
+            this(0, app.world.getPlayArea().getBounds());
+            this.maxObjectsPerNode = app.maxEntitiesInSpace;
+            this.maxTreeLevels = app.maxLevelsInSpace;
+        }
+
+        /**
+         * Clears the {@link SpacePartition} nodes.
+         */
+        public void clear() {
+            objects.clear();
+            for (int i = 0; i < nodes.length; i++) {
+                if (nodes[i] != null) {
+                    nodes[i].clear();
+                    nodes[i] = null;
+                }
+            }
+        }
+
+        /**
+         * Split the current SpacePartition into 4 sub spaces.
+         */
+        private void split() {
+            int subWidth = (int) (getWidth() / 2);
+            int subHeight = (int) (getHeight() / 2);
+            int x = (int) getX();
+            int y = (int) getY();
+            nodes[0] = new SpacePartition(level + 1, new Rectangle(x + subWidth, y, subWidth, subHeight));
+            nodes[1] = new SpacePartition(level + 1, new Rectangle(x, y, subWidth, subHeight));
+            nodes[2] = new SpacePartition(level + 1, new Rectangle(x, y + subHeight, subWidth, subHeight));
+            nodes[3] = new SpacePartition(level + 1, new Rectangle(x + subWidth, y + subHeight, subWidth, subHeight));
+        }
+
+        /**
+         * Determine which {@link SpacePartition} node the {@link Entity} belongs to.
+         *
+         * @param pRect the {@link Entity} to search in the {@link SpacePartition}'s tree.
+         * @return the depth level of the {@link Entity}; -1 means object cannot completely fit
+         * within a child node and is part of the parent node
+         */
+        private int getIndex(Entity pRect) {
+            int index = -1;
+            double verticalMidpoint = getX() + (getWidth() / 2);
+            double horizontalMidpoint = getY() + (getHeight() / 2);
+            // Object can completely fit within the top quadrants
+            boolean topQuadrant = (pRect.position.getY() < horizontalMidpoint && pRect.position.getY() + pRect.h < horizontalMidpoint);
+            // Object can completely fit within the bottom quadrants
+            boolean bottomQuadrant = (pRect.position.getY() > horizontalMidpoint);
+            // Object can completely fit within the left quadrants
+            if (pRect.position.getX() < verticalMidpoint && pRect.position.getX() + pRect.w < verticalMidpoint) {
+                if (topQuadrant) {
+                    index = 1;
+                } else if (bottomQuadrant) {
+                    index = 2;
+                }
+            }
+            // Object can completely fit within the right quadrants
+            else if (pRect.position.getX() > verticalMidpoint) {
+                if (topQuadrant) {
+                    index = 0;
+                } else if (bottomQuadrant) {
+                    index = 3;
+                }
+            }
+            return index;
+        }
+
+
+        /**
+         * Insert the {@link Entity} into the {@link SpacePartition} tree. If the node
+         * exceeds the capacity, it will split and add all
+         * objects to their corresponding nodes.
+         *
+         * @param pRect the {@link Entity} to insert into the tree.
+         */
+        public void insert(Entity pRect) {
+            if (nodes[0] != null) {
+                int index = getIndex(pRect);
+                if (index != -1) {
+                    nodes[index].insert(pRect);
+                    return;
+                }
+            }
+            objects.add(pRect);
+            if (objects.size() > maxObjectsPerNode && level < maxTreeLevels) {
+                if (nodes[0] == null) {
+                    split();
+                }
+                int i = 0;
+                while (i < objects.size()) {
+                    int index = getIndex(objects.get(i));
+                    if (index != -1) {
+                        nodes[index].insert(objects.remove(i));
+                    } else {
+                        i++;
+                    }
+                }
+            }
+            // insert all children Entity
+            pRect.getChild().forEach(c -> insert(c));
+        }
+
+        /**
+         * Find the {@link Entity} into the {@link SpacePartition} tree and return the list of neighbour's entities.
+         *
+         * @param e the entity to find.
+         * @return a list of neighbour's entities.
+         */
+        public List<Entity> find(Entity e) {
+            List<Entity> list = new ArrayList<>();
+            return find(list, e);
+        }
+
+
+        /*
+         * Return all objects that could collide with the given object
+         */
+        private List find(List returnObjects, Entity pRect) {
+            int index = getIndex(pRect);
+            if (index != -1 && nodes[0] != null) {
+                nodes[index].find(returnObjects, pRect);
+            }
+            returnObjects.addAll(objects);
+            return returnObjects;
+        }
+
+        /**
+         * Dispatch all the {@link Scene} {@link Entity}'s into the {@link SpacePartition} tree.
+         *
+         * @param scene   the Scene to be processed.
+         * @param elapsed the elapsed time since previous call (not used here).
+         */
+        public void update(Scene scene, double elapsed) {
+            this.clear();
+            scene.getEntities().forEach(e -> this.insert(e));
+        }
+
+
+        public void initialize(KarmaApp app) {
+            this.root = this;
+        }
+
+
+        /**
+         * Draw all {@link SpacePartition} nodes with a following color code:
+         * <ul>
+         *     <li><code>RED</code> the node is full,</li>
+         *     <li><code>ORANGE</code> the node has entities but is not full,</li>
+         *     <li><code>GREEN</code> the node is empty.</li>
+         * </ul>
+         *
+         * @param g     the {@link Graphics2D} API instance
+         * @param scene the {@link Scene} to be processed.
+         */
+        public void draw(Graphics2D g, Scene scene) {
+            SpacePartition sp = this;
+            if (objects.isEmpty()) {
+                g.setColor(Color.GREEN);
+            } else if (objects.size() < maxObjectsPerNode) {
+                g.setColor(Color.ORANGE);
+            } else {
+                g.setColor(Color.RED);
+            }
+            g.setFont(g.getFont().deriveFont(9.0f));
+            g.drawString("" + objects.size(), (int) x + 4, (int) y + 8);
+            g.draw(this);
+            if (this.nodes != null) {
+                for (SpacePartition node : nodes) {
+                    if (node != null) {
+                        node.draw(g, scene);
+                    }
+                }
+            }
+        }
+    }
+
     public static class GridObject extends Entity {
         private int stepW = 16, stepH = 16;
 
@@ -509,10 +724,14 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         default void onDraw(KarmaApp a, Graphics2D g, Entity e) {
         }
+
+        default void onCollision(Entity src, Entity dst) {
+
+        }
     }
 
     public KarmaApp() {
-        info("Initialization application %s (%s)%n",
+        info("Initialization karmaApp %s (%s)%n",
                 messages.getString("app.name"),
                 messages.getString("app.version"));
         loadConfiguration();
@@ -547,6 +766,8 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         sceneManager.add(new TitleScene(this));
         sceneManager.add(new PlayScene(this));
+
+        spacePartition = new SpacePartition(this);
     }
 
     private void loadConfiguration() {
@@ -635,6 +856,7 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     public void update(long d) {
         Collection<Entity> entities = sceneManager.getCurrent().getEntities();
+        cullingProcess(this, d);
         entities.forEach(e -> {
             if (!e.getPhysicType().equals(PhysicType.NONE)) {
 
@@ -664,12 +886,15 @@ public class KarmaApp extends JPanel implements KeyListener {
                     e.updateBox();
                 });
             }
-            // keep entity in the game area
+            // keep entity in the KarmaApp area
             keepInPlayArea(w, e);
             // update the box for the entity.
             e.updateBox();
             // apply physic computation on children (if any)
-            e.getChild().stream().filter(Entity::isActive).forEach(c -> applyPhysics(c, world, d));
+            e.getChild().stream().filter(Entity::isActive).forEach(c -> {
+                applyPhysics(c, world, d);
+                detectCollision(world, c, d);
+            });
         }
 
     }
@@ -702,7 +927,10 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     private void detectCollision(World w, Entity e, double d) {
         Collection<Entity> entities = sceneManager.getCurrent().getEntities();
-        entities.forEach(o -> {
+        //TODO: broad phase detect Entity at proximity cell through a Quadtree
+        List<Entity> collisionList = new CopyOnWriteArrayList<>();
+        spacePartition.find(collisionList, e);
+        collisionList.forEach(o -> {
             if (e.isActive() && !o.equals(e) && o.isActive()
                     && !o.getPhysicType().equals(PhysicType.NONE)) {
                 handleCollision(e, o);
@@ -710,9 +938,18 @@ public class KarmaApp extends JPanel implements KeyListener {
         });
     }
 
+    public synchronized void cullingProcess(KarmaApp game, float dt) {
+        spacePartition.clear();
+        for (Entity e : sceneManager.getCurrent().getEntities()) {
+            // inert object into QuadTree for collision detection.
+            spacePartition.insert(e);
+        }
+    }
+
     private void handleCollision(Entity e, Entity o) {
         if (e.box.intersects(o.box)) { //isColliding(e, o)
             debug("collision between '%s' and '%s'", e, o);
+            e.getBehaviors().forEach(b -> b.onCollision(e, o));
             resolveCollision(e, o);
             o.getChild().stream().forEach(c -> handleCollision(e, c));
             e.updateBox();
@@ -775,11 +1012,13 @@ public class KarmaApp extends JPanel implements KeyListener {
                 // Dynamic vs Static: Correction basée sur la plus grande composante de la vitesse de l'entité dynamique
                 applyPositionCorrection(entity1, entity2, velocity1, normal);
                 entity1.updateBox();
+                entity1.setVelocity(entity2.getVelocity().multiply(-entity1.getMaterial().elasticity));
             } else if (isEntity1Static && isEntity2Dynamic) {
                 // TODO: buggy pour la detection de plateforme
                 // Static vs Dynamic: Correction basée sur la plus grande composante de la vitesse de l'entité dynamique
                 applyPositionCorrection(entity2, entity1, velocity2, normal);
                 entity2.updateBox();
+                entity2.setVelocity(entity1.getVelocity().multiply(-entity1.getMaterial().elasticity));
             } else if (isEntity1Dynamic && isEntity2Dynamic) {
                 // Dynamic vs Dynamic: Correction partagée
                 double totalMass = entity1.getMass() + entity2.getMass();
@@ -880,6 +1119,7 @@ public class KarmaApp extends JPanel implements KeyListener {
                     e.getChild().forEach(c -> draw(c, g));
                 });
         sceneManager.getCurrent().draw(this, g);
+        spacePartition.draw(g, sceneManager.getCurrent());
         // free API
         g.dispose();
         // Copy buffer to window.
@@ -969,7 +1209,7 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     private void dispose() {
-        info("End of application Wind");
+        info("End of karmaApp Wind");
         if (Optional.ofNullable(frame).isPresent()) {
             frame.dispose();
         }
