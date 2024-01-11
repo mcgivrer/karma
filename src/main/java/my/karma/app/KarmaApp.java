@@ -40,7 +40,7 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     private String title = "KarmaApp";
     private World world;
-    private int debug;
+    private static int debug;
     private SceneManager sceneManager;
     private SpacePartition spacePartition;
 
@@ -135,7 +135,7 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         public Vector2D position = new Vector2D(0, 0);
         public Vector2D velocity = new Vector2D(0, 0);
-        public int w, h;
+        public double w, h;
         public Rectangle2D box = new Rectangle2D.Double();
         private Vector2D center;
 
@@ -151,6 +151,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         private List<Entity> child = new ArrayList<>();
         private long duration = -1;
         private long life = 0;
+        private boolean isStatic = false;
 
         public Entity(String name) {
             this.name = name;
@@ -311,6 +312,15 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         public Entity setMass(double m) {
             this.mass = m;
+            return this;
+        }
+
+        public boolean isStatic() {
+            return isStatic;
+        }
+
+        public Entity setStatic(boolean s) {
+            this.isStatic = s;
             return this;
         }
     }
@@ -516,24 +526,25 @@ public class KarmaApp extends JPanel implements KeyListener {
          * </ul>
          *
          * @param g     the {@link Graphics2D} API instance
-         * @param scene the {@link Scene} to be processed.
+         * @param alpha the stroke size of the grid line.
          */
-        public void draw(Graphics2D g, Scene scene) {
+        public void draw(Graphics2D g, float alpha) {
             SpacePartition sp = this;
             if (objects.isEmpty()) {
-                g.setColor(Color.GREEN);
+                g.setColor(new Color(0.0f, 1.0f, 0.0f, alpha));
             } else if (objects.size() < maxObjectsPerNode) {
-                g.setColor(Color.ORANGE);
+                g.setColor(new Color(1.0f, 1.0f, 0.0f, alpha));
             } else {
-                g.setColor(Color.RED);
+                g.setColor(new Color(1.0f, 0.0f, 0.0f, alpha));
             }
             g.setFont(g.getFont().deriveFont(9.0f));
             g.drawString("" + objects.size(), (int) x + 4, (int) y + 8);
+            g.setStroke(new BasicStroke(0.5f));
             g.draw(this);
             if (this.nodes != null) {
                 for (SpacePartition node : nodes) {
                     if (node != null) {
-                        node.draw(g, scene);
+                        node.draw(g, alpha);
                     }
                 }
             }
@@ -542,6 +553,7 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     public static class GridObject extends Entity {
         private int stepW = 16, stepH = 16;
+        private float strokeSize = 1.0f;
 
         public GridObject(String name) {
             super(name);
@@ -550,6 +562,11 @@ public class KarmaApp extends JPanel implements KeyListener {
         public GridObject setGridStep(int stepW, int stepH) {
             this.stepW = stepW;
             this.stepH = stepH;
+            return this;
+        }
+
+        public GridObject setStrokeSize(float s) {
+            this.strokeSize = s;
             return this;
         }
 
@@ -622,6 +639,8 @@ public class KarmaApp extends JPanel implements KeyListener {
     public interface Scene {
         String getTitle();
 
+        Camera getCamera();
+
         void create(KarmaApp app);
 
         default void initialize(KarmaApp app) {
@@ -689,6 +708,14 @@ public class KarmaApp extends JPanel implements KeyListener {
         public Scene getCurrent() {
             return this.current;
         }
+
+        public void load(String strList) {
+            String[] sceneItems = strList.split(",");
+            Arrays.stream(sceneItems).forEach(item -> {
+                String[] attrs = item.split(":");
+
+            });
+        }
     }
 
     public static class World {
@@ -730,6 +757,55 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
+    public static class Camera extends Entity {
+        private Entity target;
+
+        private Rectangle2D viewport;
+        private double tween;
+
+        public Camera(String name) {
+            super(name);
+        }
+
+        public Camera setTarget(Entity target) {
+            this.target = target;
+            return this;
+        }
+
+        public Camera setViewport(Rectangle2D vp) {
+            this.viewport = vp;
+            return this;
+        }
+
+        public Camera setTweenFactor(double tf) {
+            this.tween = tf;
+            return this;
+        }
+
+        public Rectangle2D getViewport() {
+            return this.viewport;
+        }
+
+        public Entity getTarget() {
+            return this.target;
+        }
+
+        public double getTweenFactor() {
+            return this.tween;
+        }
+
+        public void update(long dt) {
+            this.position.x += Math
+                    .ceil((target.position.x + (target.w * 0.5) - ((viewport.getWidth()) * 0.5) - this.position.x)
+                            * tween * Math.min(dt, 10));
+            this.position.y += Math
+                    .ceil((target.position.y + (target.h * 0.5) - ((viewport.getHeight()) * 0.5) - this.position.y)
+                            * tween * Math.min(dt, 10));
+
+            this.viewport.setRect(this.position.x, this.position.y, this.viewport.getWidth(), this.viewport.getHeight());
+        }
+    }
+
     public KarmaApp() {
         info("Initialization karmaApp %s (%s)%n",
                 messages.getString("app.name"),
@@ -762,12 +838,11 @@ public class KarmaApp extends JPanel implements KeyListener {
         frame.requestFocus();
         // Prepare drawing buffer.
         buffer = new BufferedImage(resSize.width, resSize.height, BufferedImage.TYPE_4BYTE_ABGR);
-        sceneManager = new SceneManager(this);
+
+        spacePartition = new SpacePartition(this);
 
         sceneManager.add(new TitleScene(this));
         sceneManager.add(new PlayScene(this));
-
-        spacePartition = new SpacePartition(this);
     }
 
     private void loadConfiguration() {
@@ -821,10 +896,8 @@ public class KarmaApp extends JPanel implements KeyListener {
                     world.setGravity(Double.parseDouble(arg[1]));
                 }
                 case "app.scenes.list" -> {
-                    String[] scenesStr = arg[1].split(",");
-                    for (String sceneItem : scenesStr) {
-
-                    }
+                    sceneManager = new SceneManager(this);
+                    sceneManager.load(arg[1]);
                 }
                 case "app.scenes.default" -> {
 
@@ -868,6 +941,10 @@ public class KarmaApp extends JPanel implements KeyListener {
             }
         });
         sceneManager.getCurrent().update(this, d);
+        Camera cam = sceneManager.getCurrent().getCamera();
+        if (Optional.ofNullable(cam).isPresent()) {
+            cam.update(d);
+        }
     }
 
     private void applyPhysics(Entity e, World w, long d) {
@@ -963,7 +1040,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         // Résoudre la collision en fonction du vecteur normal, de l'élasticité et de la friction
         Material material1 = entity1.getMaterial();
         Material material2 = entity2.getMaterial();
-        double elasticity = Math.min(material1.elasticity, material2.elasticity);
+        double elasticity = material1.elasticity * material2.elasticity;
 
         // Calculer les vitesses de collision en tenant compte des masses
         Vector2D v1 = entity1.getVelocity();
@@ -1012,7 +1089,7 @@ public class KarmaApp extends JPanel implements KeyListener {
                 // Dynamic vs Static: Correction basée sur la plus grande composante de la vitesse de l'entité dynamique
                 applyPositionCorrection(entity1, entity2, velocity1, normal);
                 entity1.updateBox();
-                entity1.setVelocity(entity2.getVelocity().multiply(-entity1.getMaterial().elasticity));
+                entity1.setVelocity(entity2.getVelocity().multiply(-entity2.getMaterial().elasticity));
             } else if (isEntity1Static && isEntity2Dynamic) {
                 // TODO: buggy pour la detection de plateforme
                 // Static vs Dynamic: Correction basée sur la plus grande composante de la vitesse de l'entité dynamique
@@ -1107,19 +1184,42 @@ public class KarmaApp extends JPanel implements KeyListener {
         // Clear display area
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, buffer.getWidth(), buffer.getHeight());
+        Scene scene = sceneManager.getCurrent();
+        Camera cam = sceneManager.getCurrent().getCamera();
 
         // Draw things
-
-        Collection<Entity> entities = sceneManager.getCurrent().getEntities();
+        Collection<Entity> entities = scene.getEntities();
         entities.stream()
                 .filter(Entity::isActive)
                 .sorted(Comparator.comparingInt(Entity::getPriority))
                 .forEach(e -> {
+                    if (Optional.ofNullable(cam).isPresent() && !e.isStatic()) {
+                        g.translate(
+                                -cam.position.getX(),
+                                -cam.position.getY());
+                    }
                     draw(e, g);
                     e.getChild().forEach(c -> draw(c, g));
+                    if (Optional.ofNullable(cam).isPresent() && !e.isStatic()) {
+                        g.translate(
+                                cam.position.getX(),
+                                cam.position.getY());
+                    }
                 });
         sceneManager.getCurrent().draw(this, g);
-        spacePartition.draw(g, sceneManager.getCurrent());
+        if (isDebugGreaterThan(3)) {
+            if (Optional.ofNullable(cam).isPresent()) {
+                g.translate(
+                        -cam.position.getX(),
+                        -cam.position.getY());
+            }
+            spacePartition.draw(g, 0.5f);
+            if (Optional.ofNullable(cam).isPresent()) {
+                g.translate(
+                        cam.position.getX(),
+                        cam.position.getY());
+            }
+        }
         // free API
         g.dispose();
         // Copy buffer to window.
@@ -1167,6 +1267,7 @@ public class KarmaApp extends JPanel implements KeyListener {
     private void drawGridObject(GridObject go, Graphics2D g) {
         // draw temporary background
         g.setColor(go.fc);
+        g.setStroke(new BasicStroke(go.strokeSize));
         for (double dx = 0; dx < world.getPlayArea().getWidth(); dx += go.stepW) {
             g.drawRect((int) dx, 0, 16, (int) world.getPlayArea().getHeight());
         }
@@ -1191,21 +1292,21 @@ public class KarmaApp extends JPanel implements KeyListener {
         switch (e.type) {
             case RECTANGLE -> {
                 g.setColor(e.bg);
-                g.fillRect((int) e.position.x, (int) e.position.y, e.w, e.h);
+                g.fillRect((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
                 g.setColor(e.fc);
-                g.drawRect((int) e.position.x, (int) e.position.y, e.w, e.h);
+                g.drawRect((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
             }
             case ELLIPSE -> {
                 g.setColor(e.bg);
-                g.fillOval((int) e.position.x, (int) e.position.y, e.w, e.h);
+                g.fillOval((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
                 g.setColor(e.fc);
-                g.drawOval((int) e.position.x, (int) e.position.y, e.w, e.h);
+                g.drawOval((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
             }
         }
     }
 
-    private boolean isDebugGreaterThan(int dgt) {
-        return debug >= dgt;
+    private static boolean isDebugGreaterThan(int dgt) {
+        return debug > dgt;
     }
 
     private void dispose() {
@@ -1220,7 +1321,9 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     public static void debug(String msg, Object... args) {
-        System.out.println("DEBUG|" + String.format(msg, args));
+        if (isDebugGreaterThan(1)) {
+            System.out.println("DEBUG|" + String.format(msg, args));
+        }
     }
 
     public static void error(String msg, Object... args) {
