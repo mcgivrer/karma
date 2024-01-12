@@ -24,21 +24,35 @@ public class PlayScene extends AbstractScene {
     public void create(KarmaApp app) {
         // Add a player.
         KarmaApp.Entity p = new KarmaApp.Entity("player")
-                .setPosition(160, 100)
+                .setPosition(160, 30)
+                .setPhysicType(KarmaApp.PhysicType.DYNAMIC)
                 .setSize(16, 16)
-                .setFriction(0.995)
-                .setElasticity(0.45)
+                .setMaterial(new KarmaApp.Material(0.12, 1.0, 0.25))
+                .setMass(20.0)
                 .setBorderColor(new Color(0.0f, 0.0f, 0.6f, 1.0f))
                 .setBackgroundColor(Color.BLUE)
                 .setPriority(1)
                 .addAttribute("speedStep", 0.15);
         addEntity(p);
 
+        KarmaApp.Entity platform1 = new KarmaApp.Entity("platform_01")
+                .setPosition(100, 100)
+                .setSize(100, 32)
+                .setPhysicType(KarmaApp.PhysicType.STATIC)
+                .setType(KarmaApp.EntityType.RECTANGLE)
+                .setMass(4.0)
+                .setBorderColor(Color.GRAY)
+                .setBackgroundColor(Color.DARK_GRAY)
+                .setPriority(10)
+                .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.1));
+        addEntity(platform1);
+
         KarmaApp.Entity enemies = new KarmaApp.Entity("enemy_0")
                 .setPosition(
                         (int) (Math.random() * getWorld().getPlayArea().getWidth()),
                         (int) (Math.random() * getWorld().getPlayArea().getHeight()))
                 .setSize(8, 8)
+                .setPhysicType(KarmaApp.PhysicType.DYNAMIC)
                 .setBackgroundColor(Color.RED)
                 .setType(KarmaApp.EntityType.ELLIPSE)
                 .setBorderColor(new Color(0.8f, 0.0f, 0.0f, 1.0f))
@@ -46,7 +60,8 @@ public class PlayScene extends AbstractScene {
                 .setVelocity(
                         (0.5 - Math.random()) * 0.25,
                         (0.5 - Math.random()) * 0.25)
-                .setElasticity(1.0);
+                .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.25))
+                .setMass(5.0);
         // Add some enemies.
         for (int i = 1; i < 20; i++) {
             enemies.add(
@@ -55,6 +70,7 @@ public class PlayScene extends AbstractScene {
                                     (int) (Math.random() * getWorld().getPlayArea().getWidth()),
                                     (int) (Math.random() * getWorld().getPlayArea().getHeight()))
                             .setSize(8, 8)
+                            .setPhysicType(KarmaApp.PhysicType.DYNAMIC)
                             .setBackgroundColor(Color.RED)
                             .setType(KarmaApp.EntityType.ELLIPSE)
                             .setBorderColor(new Color(0.8f, 0.0f, 0.0f, 1.0f))
@@ -62,7 +78,8 @@ public class PlayScene extends AbstractScene {
                             .setVelocity(
                                     (0.5 - Math.random()) * 0.25,
                                     (0.5 - Math.random()) * 0.25)
-                            .setElasticity(1.0));
+                            .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.99))
+                            .setMass(5.0));
         }
         addEntity(enemies);
 
@@ -75,7 +92,9 @@ public class PlayScene extends AbstractScene {
                 .setFont(fsc)
                 .setTextColor(Color.WHITE)
                 .setPosition(10, 18)
-                .setPhysicType(KarmaApp.PhysicType.NONE);
+                .setPhysicType(KarmaApp.PhysicType.NONE)
+                .setPriority(100);
+
         addEntity(score);
 
         Font fl = app.getGraphics().getFont().deriveFont(Font.BOLD, 12.0f);
@@ -87,7 +106,7 @@ public class PlayScene extends AbstractScene {
                 .setTextColor(Color.WHITE)
                 .setPosition(app.getScreenSize().width - 20, 22)
                 .setPhysicType(KarmaApp.PhysicType.NONE)
-                .setPriority(2);
+                .setPriority(101);
         addEntity(livesTxt);
 
         KarmaApp.TextObject heartTxt = (KarmaApp.TextObject) new KarmaApp.TextObject("heart")
@@ -96,7 +115,7 @@ public class PlayScene extends AbstractScene {
                 .setTextColor(Color.RED)
                 .setPosition(app.getScreenSize().width - 30, 18)
                 .setPhysicType(KarmaApp.PhysicType.NONE)
-                .setPriority(1);
+                .setPriority(100);
         addEntity(heartTxt);
 
         KarmaApp.GridObject go = (KarmaApp.GridObject) new KarmaApp.GridObject("grid")
@@ -118,17 +137,17 @@ public class PlayScene extends AbstractScene {
         double speedStep = p.getAttribute("speedStep");
 
         if (app.isKeyPressed(KeyEvent.VK_UP)) {
-            p.dy = -speedStep;
+            p.velocity.y = -speedStep;
         }
         if (app.isKeyPressed(KeyEvent.VK_DOWN)) {
-            p.dy = speedStep;
+            p.velocity.y = speedStep;
 
         }
         if (app.isKeyPressed(KeyEvent.VK_LEFT)) {
-            p.dx = -speedStep;
+            p.velocity.x = -speedStep;
         }
         if (app.isKeyPressed(KeyEvent.VK_RIGHT)) {
-            p.dx = speedStep;
+            p.velocity.x = speedStep;
         }
         // process all input behaviors
         getEntities().stream().filter(e -> e.isActive()).forEach(e -> {
@@ -144,5 +163,23 @@ public class PlayScene extends AbstractScene {
     public void update(KarmaApp app, long d) {
         ((KarmaApp.TextObject) getEntity("lives")).setValue(lives);
         ((KarmaApp.TextObject) getEntity("score")).setValue(score);
+    }
+
+    @Override
+    public void onKeyReleased(KeyEvent ke) {
+        switch (ke.getKeyCode()) {
+            case KeyEvent.VK_R -> {
+                if (ke.isControlDown()) {
+                    getEntities().stream()
+                            .filter(entity -> entity.isActive() && entity.name.startsWith("enemy_"))
+                            .forEach(entity -> {
+                                entity.setVelocity(
+                                        new KarmaApp.Vector2D(
+                                                Math.random() * 5.0,
+                                                Math.random() * 5.0));
+                            });
+                }
+            }
+        }
     }
 }
