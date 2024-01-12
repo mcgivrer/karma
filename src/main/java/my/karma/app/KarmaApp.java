@@ -11,6 +11,8 @@ import java.awt.geom.RectangularShape;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +39,8 @@ public class KarmaApp extends JPanel implements KeyListener {
     private Dimension winSize;
     private Dimension resSize;
     private int strategyBufferNb;
+    private long collisionCounter = 0;
+
 
     private String title = "KarmaApp";
     private World world;
@@ -250,7 +254,7 @@ public class KarmaApp extends JPanel implements KeyListener {
             return material;
         }
 
-        public <T> Entity addAttribute(String attrName, T attrValue) {
+        public <T> Entity setAttribute(String attrName, T attrValue) {
             this.attributes.put(attrName, attrValue);
             return this;
         }
@@ -647,6 +651,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
 
         default void input(KarmaApp app) {
+
         }
 
         default void update(KarmaApp app, long d) {
@@ -925,21 +930,33 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     public void input() {
         sceneManager.getCurrent().input(this);
+        // process all input behaviors
+        sceneManager.getCurrent().getEntities().stream().filter(KarmaApp.Entity::isActive).forEach(e -> {
+            if (!e.getBehaviors().isEmpty()) {
+                e.getBehaviors().forEach(b -> {
+                    b.onInput(this, e);
+                });
+            }
+        });
     }
 
     public void update(long d) {
         Collection<Entity> entities = sceneManager.getCurrent().getEntities();
         cullingProcess(this, d);
-        entities.forEach(e -> {
-            if (!e.getPhysicType().equals(PhysicType.NONE)) {
-
-                applyPhysics(e, world, d);
-                detectCollision(world, e, d);
-                // update the entity (lifetime and active status)
-                e.update(d);
-                e.updateBox();
-            }
-        });
+        entities.stream()
+                .filter(Entity::isActive)
+                .forEach(e -> {
+                    if (!e.getPhysicType().equals(PhysicType.NONE)) {
+                        // compute physic on the Entity (velocity & position)
+                        applyPhysics(e, world, d);
+                        // detect collision and apply response
+                        detectCollision(world, e, d);
+                        // update the entity (lifetime and active status)
+                        e.update(d);
+                        //update the bounding box for that entity
+                        e.updateBox();
+                    }
+                });
         sceneManager.getCurrent().update(this, d);
         Camera cam = sceneManager.getCurrent().getCamera();
         if (Optional.ofNullable(cam).isPresent()) {
@@ -1007,9 +1024,11 @@ public class KarmaApp extends JPanel implements KeyListener {
         //TODO: broad phase detect Entity at proximity cell through a Quadtree
         List<Entity> collisionList = new CopyOnWriteArrayList<>();
         spacePartition.find(collisionList, e);
+        collisionCounter = 0;
         collisionList.forEach(o -> {
             if (e.isActive() && !o.equals(e) && o.isActive()
                     && !o.getPhysicType().equals(PhysicType.NONE)) {
+                collisionCounter++;
                 handleCollision(e, o);
             }
         });
@@ -1017,18 +1036,19 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     public synchronized void cullingProcess(KarmaApp game, float dt) {
         spacePartition.clear();
-        for (Entity e : sceneManager.getCurrent().getEntities()) {
-            // inert object into QuadTree for collision detection.
-            spacePartition.insert(e);
-        }
+        sceneManager.getCurrent().getEntities().stream()
+                .filter(Entity::isActive)
+                .forEach(e -> {
+                    spacePartition.insert(e);
+                });
     }
 
     private void handleCollision(Entity e, Entity o) {
-        if (e.box.intersects(o.box)) { //isColliding(e, o)
+        if (e.box.intersects(o.box)) {
             debug("collision between '%s' and '%s'", e, o);
             e.getBehaviors().forEach(b -> b.onCollision(e, o));
             resolveCollision(e, o);
-            o.getChild().stream().forEach(c -> handleCollision(e, c));
+            o.getChild().forEach(c -> handleCollision(e, c));
             e.updateBox();
         }
     }
@@ -1234,10 +1254,27 @@ public class KarmaApp extends JPanel implements KeyListener {
                 null);
 
         if (isDebugGreaterThan(1)) {
-            gs.setColor(new Color(0.6f, 0.6f, 0.6f, 0.50f));
+            long countActiveEntities = entities.stream()
+                    .filter(Entity::isActive).count();
+            long countStaticEntities = entities.stream()
+                    .filter(e -> e.getPhysicType().equals(PhysicType.STATIC)).count();
+            long countDynamicEntities = entities.stream()
+                    .filter(e -> e.getPhysicType().equals(PhysicType.DYNAMIC)).count();
+            long countNoneEntities = entities.stream()
+                    .filter(e -> e.getPhysicType().equals(PhysicType.NONE)).count();
+            long collidingEventsCount = collisionCounter;
+            gs.setColor(new Color(0.6f, 0.3f, 0.1f, 0.50f));
             gs.fillRect(8, winSize.height + 8, winSize.width, 32);
-            gs.setColor(Color.WHITE);
-            gs.drawString(String.format("[dbg: %d | nb:%d]", debug, entities.size()), 16, winSize.height + 24);
+            gs.setColor(Color.ORANGE);
+            gs.drawString(
+                    String.format("[ debug: %d | entity(sta:%d,dyn:%d,non:%d) | active:%d | collision:%d ]",
+                            debug,
+                            countStaticEntities,
+                            countDynamicEntities,
+                            countNoneEntities,
+                            countActiveEntities,
+                            collidingEventsCount),
+                    16, winSize.height + 24);
         }
         // Switch buffer strategy
         bs.show();
@@ -1262,6 +1299,11 @@ public class KarmaApp extends JPanel implements KeyListener {
                 b.onDraw(this, g, e);
             });
         }
+        if (isDebugGreaterThan(3)) {
+            g.setColor(Color.ORANGE);
+            g.setFont(g.getFont().deriveFont(9.0f));
+            g.drawString("#" + e.name, (int) e.getPosition().getX(), (int) e.getPosition().getY());
+        }
     }
 
     private void drawGridObject(GridObject go, Graphics2D g) {
@@ -1274,6 +1316,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         for (double dy = 0; dy < world.getPlayArea().getHeight(); dy += go.stepH) {
             g.drawRect(0, (int) dy, (int) world.getPlayArea().getWidth(), 16);
         }
+        g.setStroke(new BasicStroke(1.0f));
     }
 
     private static void drawTextObject(TextObject to, Graphics2D g) {
@@ -1317,17 +1360,21 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     public static void info(String msg, Object... args) {
-        System.out.println("INFO|" + String.format(msg, args));
+
+        DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE_TIME;
+        System.out.printf("%s|INFO|%s%n", dtf.format(LocalDateTime.now()), String.format(msg, args));
     }
 
     public static void debug(String msg, Object... args) {
+        DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE_TIME;
         if (isDebugGreaterThan(1)) {
-            System.out.println("DEBUG|" + String.format(msg, args));
+            System.out.printf("%s|DEBUG|%s%n", dtf.format(LocalDateTime.now()), String.format(msg, args));
         }
     }
 
     public static void error(String msg, Object... args) {
-        System.out.println("ERROR|" + String.format(msg, args));
+        DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE_TIME;
+        System.out.printf("%s|ERROR|%s%n", dtf.format(LocalDateTime.now()), String.format(msg, args));
     }
 
     @Override

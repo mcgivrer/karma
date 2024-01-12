@@ -4,6 +4,7 @@ import java.awt.geom.Rectangle2D;
 
 import my.karma.app.AbstractScene;
 import my.karma.app.KarmaApp;
+import my.karma.app.behaviors.PlayerInputBehavior;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -24,12 +25,14 @@ public class PlayScene extends AbstractScene {
 
     @Override
     public void create(KarmaApp app) {
-        // Add camera
 
+        createPlatforms(app);
+
+        // Add camera
         KarmaApp.Camera cam = new KarmaApp.Camera("camera_01")
                 .setTweenFactor(0.2)
                 .setViewport(new Rectangle2D.Double(0, 0, app.getScreenSize().width, app.getScreenSize().height));
-
+        setCamera(cam);
 
         // Add a player.
         KarmaApp.Entity p = new KarmaApp.Entity("player")
@@ -41,11 +44,22 @@ public class PlayScene extends AbstractScene {
                 .setBorderColor(new Color(0.0f, 0.0f, 0.6f, 1.0f))
                 .setBackgroundColor(Color.BLUE)
                 .setPriority(1)
-                .addAttribute("speedStep", 0.15);
+                .setAttribute("speedStep", 0.15)
+                .setAttribute("energy", 100.0)
+                .setAttribute("mana", 100.0)
+                .setAttribute("hit", 1.0)
+                .addBehavior(new PlayerInputBehavior());
         addEntity(p);
         cam.setTarget(p);
-        setCamera(cam);
 
+        // Add some enemies.
+        generateEnemies(20);
+
+        // Create HUD
+        createHUD(app);
+    }
+
+    private void createPlatforms(KarmaApp app) {
         KarmaApp.Entity platform1 = new KarmaApp.Entity("platform_01")
                 .setPosition(100, 100)
                 .setSize(100, 32)
@@ -58,9 +72,9 @@ public class PlayScene extends AbstractScene {
                 .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.1));
         addEntity(platform1);
 
-        KarmaApp.Entity platform2 = new KarmaApp.Entity("platform_02")
-                .setPosition(0, 64)
-                .setSize(100, 16)
+        KarmaApp.Entity platform2 = new KarmaApp.Entity("platform_border_top")
+                .setPosition(0, 0)
+                .setSize((int) app.getWorld().getPlayArea().getWidth(), 16)
                 .setPhysicType(KarmaApp.PhysicType.STATIC)
                 .setType(KarmaApp.EntityType.RECTANGLE)
                 .setMass(4.0)
@@ -70,54 +84,45 @@ public class PlayScene extends AbstractScene {
                 .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.1));
         addEntity(platform2);
 
-        KarmaApp.Entity platform3 = new KarmaApp.Entity("platform_02")
-                .setPosition(0, getWorld().getPlayArea().getHeight() - 32)
+        KarmaApp.Entity platform3 = new KarmaApp.Entity("platform_border_bottom")
+                .setPosition(0, getWorld().getPlayArea().getHeight())
                 .setSize((int) getWorld().getPlayArea().getWidth(), 16)
                 .setPhysicType(KarmaApp.PhysicType.STATIC)
                 .setType(KarmaApp.EntityType.RECTANGLE)
                 .setMass(4.0)
-                .setBorderColor(Color.BLUE)
-                .setBackgroundColor(Color.BLUE)
+                .setBorderColor(Color.GRAY)
+                .setBackgroundColor(Color.DARK_GRAY)
                 .setPriority(10)
                 .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.35));
-        addEntity(platform2);
+        addEntity(platform3);
 
-        KarmaApp.Entity enemies = new KarmaApp.Entity("enemy_0")
-                .setPosition(
-                        (int) (Math.random() * getWorld().getPlayArea().getWidth()),
-                        (int) (Math.random() * getWorld().getPlayArea().getHeight()))
-                .setSize(8, 8)
-                .setPhysicType(KarmaApp.PhysicType.DYNAMIC)
-                .setBackgroundColor(Color.RED)
-                .setType(KarmaApp.EntityType.ELLIPSE)
-                .setBorderColor(new Color(0.8f, 0.0f, 0.0f, 1.0f))
-                .setPriority(0)
-                .setVelocity(
-                        (0.5 - Math.random()) * 0.25,
-                        (0.5 - Math.random()) * 0.25)
-                .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.25))
-                .setMass(5.0);
-        // Add some enemies.
-        for (int i = 1; i < 20; i++) {
-            enemies.add(
-                    new KarmaApp.Entity("enemy_" + i)
-                            .setPosition(
-                                    (int) (Math.random() * getWorld().getPlayArea().getWidth()),
-                                    (int) (Math.random() * getWorld().getPlayArea().getHeight()))
-                            .setSize(8, 8)
-                            .setPhysicType(KarmaApp.PhysicType.DYNAMIC)
-                            .setBackgroundColor(Color.RED)
-                            .setType(KarmaApp.EntityType.ELLIPSE)
-                            .setBorderColor(new Color(0.8f, 0.0f, 0.0f, 1.0f))
-                            .setPriority(-i)
-                            .setVelocity(
-                                    (0.5 - Math.random()) * 0.25,
-                                    (0.5 - Math.random()) * 0.25)
-                            .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.99))
-                            .setMass(5.0));
-        }
-        addEntity(enemies);
+        KarmaApp.Entity platform4 = new KarmaApp.Entity("platform_border_left")
+                .setPosition(0, 16)
+                .setSize(16, (int) getWorld().getPlayArea().getHeight())
+                .setPhysicType(KarmaApp.PhysicType.STATIC)
+                .setType(KarmaApp.EntityType.RECTANGLE)
+                .setMass(4.0)
+                .setBorderColor(Color.GRAY)
+                .setBackgroundColor(Color.DARK_GRAY)
+                .setPriority(10)
+                .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.35));
+        addEntity(platform4);
 
+        KarmaApp.Entity platform5 = new KarmaApp.Entity("platform_border_right")
+                .setPosition((int) getWorld().getPlayArea().getWidth() - 16, 16)
+                .setSize(16, (int) getWorld().getPlayArea().getHeight()-16)
+                .setPhysicType(KarmaApp.PhysicType.STATIC)
+                .setType(KarmaApp.EntityType.RECTANGLE)
+                .setMass(4.0)
+                .setBorderColor(Color.GRAY)
+                .setBackgroundColor(Color.DARK_GRAY)
+                .setPriority(10)
+                .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.35));
+        addEntity(platform5);
+
+    }
+
+    private void createHUD(KarmaApp app) {
         // Add a HUD score display
         Font fsc = app.getGraphics().getFont().deriveFont(Font.BOLD, 18.0f);
         KarmaApp.TextObject score = (KarmaApp.TextObject) new KarmaApp.TextObject("score")
@@ -163,6 +168,50 @@ public class PlayScene extends AbstractScene {
         addEntity(go);
     }
 
+    private void generateEnemies(int nbEnemies) {
+        for (int i = 0; i < nbEnemies; i++) {
+            addEntity(
+                    new KarmaApp.Entity("enemy_" + i)
+                            .setPosition(
+                                    (int) 16+(Math.random() * (getWorld().getPlayArea().getWidth()-32)),
+                                    (int) 16+(Math.random() * (getWorld().getPlayArea().getHeight())-32))
+                            .setSize(8, 8)
+                            .setPhysicType(KarmaApp.PhysicType.DYNAMIC)
+                            .setBackgroundColor(Color.RED)
+                            .setType(KarmaApp.EntityType.ELLIPSE)
+                            .setBorderColor(new Color(0.8f, 0.0f, 0.0f, 1.0f))
+                            .setPriority(-i)
+                            .setVelocity(
+                                    (0.5 - Math.random()) * 0.25,
+                                    (0.5 - Math.random()) * 0.25)
+                            .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.99))
+                            .setMass(5.0)
+                            .setAttribute("energy", 20.0)
+                            .addBehavior(new KarmaApp.Behavior<KarmaApp.Entity>() {
+                                @Override
+                                public void onCollision(KarmaApp.Entity src, KarmaApp.Entity dst) {
+                                    // get src Entity energy
+                                    if (src.getAttribute("energy") != null && dst.name.startsWith("player")) {
+                                        double energy = src.getAttribute("energy");
+                                        // retrieve hit power from dst Entity if exists, else set 1
+                                        double hit = dst.getAttribute("hit") != null ? dst.getAttribute("hit") : 0.1;
+                                        // compute new energy for src Entity.
+                                        energy -= hit;
+                                        if (energy < 10) {
+                                            src.setBorderColor(Color.RED);
+                                            src.setBackgroundColor(Color.ORANGE);
+                                        }
+                                        if (energy <= 0) {
+                                            src.setActive(false);
+                                            score += 10;
+                                        }
+                                        src.setAttribute("energy", energy);
+                                    }
+                                }
+                            }));
+        }
+    }
+
     @Override
     public void initialize(KarmaApp app) {
         score = 0;
@@ -170,38 +219,29 @@ public class PlayScene extends AbstractScene {
     }
 
     @Override
-    public void input(KarmaApp app) {
-        KarmaApp.Entity p = getEntity("player");
-
-        double speedStep = p.getAttribute("speedStep");
-
-        if (app.isKeyPressed(KeyEvent.VK_UP)) {
-            p.velocity.y = -speedStep;
-        }
-        if (app.isKeyPressed(KeyEvent.VK_DOWN)) {
-            p.velocity.y = speedStep;
-
-        }
-        if (app.isKeyPressed(KeyEvent.VK_LEFT)) {
-            p.velocity.x = -speedStep;
-        }
-        if (app.isKeyPressed(KeyEvent.VK_RIGHT)) {
-            p.velocity.x = speedStep;
-        }
-        // process all input behaviors
-        getEntities().stream().filter(e -> e.isActive()).forEach(e -> {
-            if (!e.getBehaviors().isEmpty()) {
-                e.getBehaviors().forEach(b -> {
-                    b.onInput(app, e);
-                });
-            }
-        });
-    }
-
-    @Override
     public void update(KarmaApp app, long d) {
         ((KarmaApp.TextObject) getEntity("lives")).setValue(lives);
         ((KarmaApp.TextObject) getEntity("score")).setValue(score);
+    }
+
+    @Override
+    public void draw(KarmaApp app, Graphics2D g) {
+
+        KarmaApp.Entity player = getEntity("player");
+        g.setStroke(new BasicStroke(1.0f));
+        double energy = player.getAttribute("energy");
+        g.setColor(Color.RED);
+        g.fillRect(app.getScreenSize().width - 80, 10, (int) ((energy / 100.0) * 40.0), 4);
+        g.setColor(Color.BLACK);
+        g.drawRect(app.getScreenSize().width - 80, 10, (int) ((energy / 100.0) * 40.0), 4);
+
+        double mana = player.getAttribute("mana");
+        g.setColor(Color.BLUE);
+        g.fillRect(app.getScreenSize().width - 80, 16, (int) ((mana / 100.0) * 40.0), 4);
+        g.setColor(Color.BLACK);
+        g.drawRect(app.getScreenSize().width - 80, 16, (int) ((mana / 100.0) * 40.0), 4);
+
+
     }
 
     @Override
