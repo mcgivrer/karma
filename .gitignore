@@ -6,3 +6,4 @@
 /target
 **/*.class
 /build
+/src/main/javadoc/overview.html
