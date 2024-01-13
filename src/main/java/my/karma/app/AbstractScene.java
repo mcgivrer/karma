@@ -10,6 +10,7 @@ public abstract class AbstractScene implements KarmaApp.Scene {
 
     private final Map<String, KarmaApp.Entity> entities = new ConcurrentHashMap<>();
     private final KarmaApp.World world;
+    private KarmaApp.Camera camera;
 
     public AbstractScene(KarmaApp app) {
         this.world = app.getWorld();
@@ -35,4 +36,12 @@ public abstract class AbstractScene implements KarmaApp.Scene {
         return entities.values();
     }
 
+    public KarmaApp.Camera getCamera() {
+        return this.camera;
+    }
+
+    public KarmaApp.Scene setCamera(KarmaApp.Camera c) {
+        this.camera = c;
+        return this;
+    }
 }

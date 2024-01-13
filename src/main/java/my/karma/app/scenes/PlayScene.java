@@ -1,5 +1,7 @@
 package my.karma.app.scenes;
 
+import java.awt.geom.Rectangle2D;
+
 import my.karma.app.AbstractScene;
 import my.karma.app.KarmaApp;
 
@@ -22,6 +24,13 @@ public class PlayScene extends AbstractScene {
 
     @Override
     public void create(KarmaApp app) {
+        // Add camera
+
+        KarmaApp.Camera cam = new KarmaApp.Camera("camera_01")
+                .setTweenFactor(0.2)
+                .setViewport(new Rectangle2D.Double(0, 0, app.getScreenSize().width, app.getScreenSize().height));
+
+
         // Add a player.
         KarmaApp.Entity p = new KarmaApp.Entity("player")
                 .setPosition(160, 30)
@@ -34,6 +43,8 @@ public class PlayScene extends AbstractScene {
                 .setPriority(1)
                 .addAttribute("speedStep", 0.15);
         addEntity(p);
+        cam.setTarget(p);
+        setCamera(cam);
 
         KarmaApp.Entity platform1 = new KarmaApp.Entity("platform_01")
                 .setPosition(100, 100)
@@ -46,6 +57,30 @@ public class PlayScene extends AbstractScene {
                 .setPriority(10)
                 .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.1));
         addEntity(platform1);
+
+        KarmaApp.Entity platform2 = new KarmaApp.Entity("platform_02")
+                .setPosition(0, 64)
+                .setSize(100, 16)
+                .setPhysicType(KarmaApp.PhysicType.STATIC)
+                .setType(KarmaApp.EntityType.RECTANGLE)
+                .setMass(4.0)
+                .setBorderColor(Color.GRAY)
+                .setBackgroundColor(Color.DARK_GRAY)
+                .setPriority(10)
+                .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.1));
+        addEntity(platform2);
+
+        KarmaApp.Entity platform3 = new KarmaApp.Entity("platform_02")
+                .setPosition(0, getWorld().getPlayArea().getHeight() - 32)
+                .setSize((int) getWorld().getPlayArea().getWidth(), 16)
+                .setPhysicType(KarmaApp.PhysicType.STATIC)
+                .setType(KarmaApp.EntityType.RECTANGLE)
+                .setMass(4.0)
+                .setBorderColor(Color.BLUE)
+                .setBackgroundColor(Color.BLUE)
+                .setPriority(10)
+                .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.35));
+        addEntity(platform2);
 
         KarmaApp.Entity enemies = new KarmaApp.Entity("enemy_0")
                 .setPosition(
@@ -93,7 +128,8 @@ public class PlayScene extends AbstractScene {
                 .setTextColor(Color.WHITE)
                 .setPosition(10, 18)
                 .setPhysicType(KarmaApp.PhysicType.NONE)
-                .setPriority(100);
+                .setPriority(100)
+                .setStatic(true);
 
         addEntity(score);
 
@@ -106,7 +142,8 @@ public class PlayScene extends AbstractScene {
                 .setTextColor(Color.WHITE)
                 .setPosition(app.getScreenSize().width - 20, 22)
                 .setPhysicType(KarmaApp.PhysicType.NONE)
-                .setPriority(101);
+                .setPriority(101)
+                .setStatic(true);
         addEntity(livesTxt);
 
         KarmaApp.TextObject heartTxt = (KarmaApp.TextObject) new KarmaApp.TextObject("heart")
@@ -115,12 +152,14 @@ public class PlayScene extends AbstractScene {
                 .setTextColor(Color.RED)
                 .setPosition(app.getScreenSize().width - 30, 18)
                 .setPhysicType(KarmaApp.PhysicType.NONE)
-                .setPriority(100);
+                .setPriority(100)
+                .setStatic(true);
         addEntity(heartTxt);
 
         KarmaApp.GridObject go = (KarmaApp.GridObject) new KarmaApp.GridObject("grid")
+                .setStrokeSize(0.5f)
                 .setPriority(-10)
-                .setBorderColor(Color.DARK_GRAY);
+                .setBorderColor(new Color(0.5f, 0.5f, 0.5f, 0.5f));
         addEntity(go);
     }
 
