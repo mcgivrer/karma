@@ -211,3 +211,130 @@ public void createScene() {
 let's compile and run :
 
 ![The new TextObject to display some text](illustrations/04-text_object-01.png)
+
+## Enhancing the TextObject
+
+We can add new features to our TextObject, like a black border, and a text `format` to automatically define a formatting
+text for the supported `value`,and a better draw control with a `font` attribute.
+
+let's add nw attributes:
+
+```java
+public static class TextObject extends Entity {
+    //...
+    private Font font;
+    private String format = "";
+    private Object value;
+
+    public TextObject setFont(Font f) {
+        this.font = f;
+        return this;
+    }
+
+    public Font getFont() {
+        return font;
+    }
+
+    //...
+    public TextObject setFormat(String f) {
+        this.format = f;
+        return this;
+    }
+
+    public String getFormat() {
+        return format;
+    }
+
+    public TextObject setValue(Object v) {
+        this.value = v;
+        if (!this.format.equals("")) {
+            this.text = String.format(this.format, value);
+        }
+        return this;
+    }
+
+    public Object getValue() {
+        return value;
+    }
+}
+```
+
+now in the rendering process :
+
+```java
+private static void drawTextObject(TextObject to, Graphics2D g) {
+    g.setFont(to.getFont());
+    g.setColor(Color.BLACK);
+    for (int dx = -1; dx < 2; dx++) {
+        for (int dy = -1; dy < 2; dy++) {
+            g.drawString(to.getText(), (int) to.x + dx, (int) to.y + dy);
+        }
+    }
+    g.setColor(to.getTextColor());
+    g.drawString(to.getText(), (int) to.x, (int) to.y);
+}
+```
+
+And for our sample code, we add 2 new variables: `score` and `lives`.
+
+```java
+public class KarmaApp extends JPanel implements KeyListener {
+    //...
+    private int lives = 5;
+    private int score = 0;
+    //...
+}
+```
+
+modify our existing `scoreTxt` and `lifeTxt` TextObject initialization :
+
+First, initialize a new Font for the score `<1>`, then define the new font ,value and format for the score `<2>`
+And then, create a second smaller font for the number of remaining lives `<3>`, and set everything `<4>`
+
+```java
+public void createScene() {
+    //...
+    // Add a HUD score display
+    // <1>
+    Font fsc = buffer.createGraphics().getFont().deriveFont(Font.BOLD, 18.0f);
+    TextObject score = (TextObject) new TextObject("score")
+            .setText("")
+            // <2>
+            .setValue(0)
+            .setFormat("%05d")
+            .setFont(fsc)
+            .setTextColor(Color.WHITE)
+            .setPosition(10, 18)
+            .setPhysicType(PhysicType.NONE);
+    addEntity(score);
+    // <3>
+    Font fl = buffer.createGraphics().getFont().deriveFont(Font.BOLD, 12.0f);
+    TextObject livesTxt = (TextObject) new TextObject("lives")
+            .setText("")
+            // <4>
+            .setValue(5)
+            .setFormat("%d")
+            .setFont(fl)
+            .setTextColor(Color.WHITE)
+            .setPosition(resSize.width - 20, 22)
+            .setPhysicType(PhysicType.NONE)
+            .setPriority(2);
+    addEntity(livesTxt);
+
+    //...
+}
+```
+
+We also will adapt the update method:
+
+```java
+    public void update(long d) {
+    //...
+    ((TextObject) entities.get("lives")).setValue(lives);
+    ((TextObject) entities.get("score")).setValue(score);
+}
+```
+
+Compile and run !
+
+![the resulting changes on the score and lives](illustrations/04-text_object-02.png)
