@@ -1254,32 +1254,36 @@ public class KarmaApp extends JPanel implements KeyListener {
                 null);
 
         if (isDebugGreaterThan(1)) {
-            long countActiveEntities = entities.stream()
-                    .filter(Entity::isActive).count();
-            long countStaticEntities = entities.stream()
-                    .filter(e -> e.getPhysicType().equals(PhysicType.STATIC)).count();
-            long countDynamicEntities = entities.stream()
-                    .filter(e -> e.getPhysicType().equals(PhysicType.DYNAMIC)).count();
-            long countNoneEntities = entities.stream()
-                    .filter(e -> e.getPhysicType().equals(PhysicType.NONE)).count();
-            long collidingEventsCount = collisionCounter;
-            gs.setColor(new Color(0.6f, 0.3f, 0.1f, 0.50f));
-            gs.fillRect(8, winSize.height + 8, winSize.width, 32);
-            gs.setColor(Color.ORANGE);
-            gs.drawString(
-                    String.format("[ debug: %d | entity(sta:%d,dyn:%d,non:%d) | active:%d | collision:%d ]",
-                            debug,
-                            countStaticEntities,
-                            countDynamicEntities,
-                            countNoneEntities,
-                            countActiveEntities,
-                            collidingEventsCount),
-                    16, winSize.height + 24);
+            displayDebugLineOnScreen(entities, gs);
         }
         // Switch buffer strategy
         bs.show();
         // free API
         gs.dispose();
+    }
+
+    private void displayDebugLineOnScreen(Collection<Entity> entities, Graphics2D gs) {
+        long countActiveEntities = entities.stream()
+                .filter(Entity::isActive).count();
+        long countStaticEntities = entities.stream()
+                .filter(e -> e.getPhysicType().equals(PhysicType.STATIC)).count();
+        long countDynamicEntities = entities.stream()
+                .filter(e -> e.getPhysicType().equals(PhysicType.DYNAMIC)).count();
+        long countNoneEntities = entities.stream()
+                .filter(e -> e.getPhysicType().equals(PhysicType.NONE)).count();
+        long collidingEventsCount = collisionCounter;
+        gs.setColor(new Color(0.6f, 0.3f, 0.1f, 0.50f));
+        gs.fillRect(8, winSize.height + 8, winSize.width, 32);
+        gs.setColor(Color.ORANGE);
+        gs.drawString(
+                String.format("[ debug: %d | entity(sta:%d,dyn:%d,non:%d) | active:%d | collision:%d ]",
+                        debug,
+                        countStaticEntities,
+                        countDynamicEntities,
+                        countNoneEntities,
+                        countActiveEntities,
+                        collidingEventsCount),
+                16, winSize.height + 24);
     }
 
     private void draw(Entity e, Graphics2D g) {
