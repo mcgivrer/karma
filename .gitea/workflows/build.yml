@@ -16,7 +16,7 @@ jobs:
       - name: Build project with Maven and Xvfb
         run: |
          apt update -y
-         apt -y install xvfb curl zip unzip
+         apt -y install xvfb curl zip unzip xsltproc
          export DISPLAY=":99.0"
          export AUDIODEV=null
          xvfb-run :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
