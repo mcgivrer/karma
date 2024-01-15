@@ -45,6 +45,7 @@ public class KarmaApp extends JPanel implements KeyListener {
     private String title = "KarmaApp";
     private World world;
     private static int debug;
+    private static String debugFilter = "";
     private SceneManager sceneManager;
     private SpacePartition spacePartition;
 
@@ -156,6 +157,8 @@ public class KarmaApp extends JPanel implements KeyListener {
         private long life = 0;
         private boolean isStatic = false;
 
+        private Collection<CollisionEvent> collisions = new ArrayList<>();
+
         public Entity(String name) {
             this.name = name;
         }
@@ -165,8 +168,22 @@ public class KarmaApp extends JPanel implements KeyListener {
             return this;
         }
 
+        public Entity add(CollisionEvent ce) {
+            collisions.add(ce);
+            return this;
+        }
+
+        public Collection<CollisionEvent> getCollisions() {
+            return collisions;
+        }
+
         public Collection<Entity> getChild() {
             return child;
+        }
+
+        public Entity clearCollisions() {
+            this.collisions.clear();
+            return this;
         }
 
         public void update(long d) {
@@ -945,6 +962,7 @@ public class KarmaApp extends JPanel implements KeyListener {
             switch (arg[0]) {
                 case "app.exit" -> exit = Boolean.parseBoolean(arg[1]);
                 case "app.debug" -> debug = Integer.parseInt(arg[1]);
+                case "app.debug.filter" -> debugFilter = arg[1];
                 case "app.title" -> title = arg[1];
                 case "app.window.size" -> {
                     String[] res = arg[1].split("x");
@@ -995,13 +1013,22 @@ public class KarmaApp extends JPanel implements KeyListener {
     public void input() {
         sceneManager.getCurrent().input(this);
         // process all input behaviors
-        sceneManager.getCurrent().getEntities().stream().filter(KarmaApp.Entity::isActive).forEach(e -> {
-            if (!e.getBehaviors().isEmpty()) {
-                e.getBehaviors().forEach(b -> {
-                    b.onInput(this, e);
+        sceneManager.getCurrent().getEntities().stream()
+                .filter(KarmaApp.Entity::isActive)
+                .forEach(e -> {
+                    processInput(e);
                 });
-            }
-        });
+    }
+
+    public void processInput(Entity e) {
+        // apply entity's behaviors
+        if (!e.getBehaviors().isEmpty()) {
+            e.getBehaviors().forEach(b -> {
+                b.onInput(this, e);
+            });
+        }
+        // apply child's behaviors.
+        e.getChild().forEach(c -> processInput(c));
     }
 
     public void update(long d) {
@@ -1089,6 +1116,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         List<Entity> collisionList = new CopyOnWriteArrayList<>();
         spacePartition.find(collisionList, e);
         collisionCounter = 0;
+        e.clearCollisions();
         collisionList.forEach(o -> {
             if (e.isActive() && !o.equals(e) && o.isActive()
                     && !o.getPhysicType().equals(PhysicType.NONE)) {
@@ -1109,13 +1137,12 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     private void handleCollision(Entity e, Entity o) {
         if (e.box.intersects(o.box)) {
-            debug("collision between '%s' and '%s'", e, o);
             // Detect Collision Side
             CollisionEvent ce = new CollisionEvent(e, o);
             ce.setNormal(calculateCollisionNormal(e, o));
             ce.setPenetrationDepth(calculatePenetrationDepth(e, o, ce.getNormal()));
-            if (Math.abs(ce.getNormal().x) > Math.abs(ce.getNormal().y)) {
-                if (ce.getNormal().x > 0) {
+            if (Math.abs(ce.getNormal().y) > Math.abs(ce.getNormal().x)) {
+                if (ce.getNormal().x < 0) {
                     ce.setCollisionSide(CollisionSide.RIGHT);
                 } else {
                     ce.setCollisionSide(CollisionSide.LEFT);
@@ -1129,8 +1156,12 @@ public class KarmaApp extends JPanel implements KeyListener {
             }
             e.getBehaviors().forEach(b -> b.onCollision(ce));
             resolveCollision(ce);
+            e.add(ce);
             o.getChild().forEach(c -> handleCollision(e, c));
             e.updateBox();
+            if (debugFilter.contains(e.name) || debugFilter.equals("")) {
+                debug("handle collision on %s between '%s' and '%s'", ce.side, ce.getSrc(), ce.getDst());
+            }
         }
     }
 
@@ -1223,8 +1254,6 @@ public class KarmaApp extends JPanel implements KeyListener {
                 ce.getSrc().updateBox();
                 ce.getDst().updateBox();
             }
-        } else {
-            debug("No collision between '%s' and '%s'", ce.getSrc(), ce.getDst());
         }
     }
 
@@ -1408,6 +1437,16 @@ public class KarmaApp extends JPanel implements KeyListener {
             g.setColor(Color.ORANGE);
             g.setFont(g.getFont().deriveFont(9.0f));
             g.drawString("#" + e.name, (int) e.getPosition().getX(), (int) e.getPosition().getY());
+
+            // draw collision info
+            e.getCollisions().forEach(ce -> {
+                g.setColor(Color.YELLOW);
+                Vector2D pos2 = e.getPosition()
+                        .add(ce.getNormal())
+                        .multiply(ce.getPenetrationDepth())
+                        .multiply(10.0);
+                g.drawLine((int) e.getPosition().x, (int) e.getPosition().y, (int) pos2.getX(), (int) pos2.getY());
+            });
         }
     }
 
