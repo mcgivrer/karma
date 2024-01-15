@@ -5,7 +5,8 @@ import my.karma.app.scenes.TitleScene;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RectangularShape;
 import java.awt.image.BufferStrategy;
@@ -40,7 +41,6 @@ public class KarmaApp extends JPanel implements KeyListener {
     private Dimension resSize;
     private int strategyBufferNb;
     private long collisionCounter = 0;
-
 
     private String title = "KarmaApp";
     private World world;
@@ -129,7 +129,6 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
-
     public static class Entity {
         private static long index = 0;
         private PhysicType physicType = PhysicType.DYNAMIC;
@@ -150,9 +149,9 @@ public class KarmaApp extends JPanel implements KeyListener {
         private int priority = 1;
         private final Map<String, Object> attributes = new ConcurrentHashMap<>();
         private EntityType type = EntityType.RECTANGLE;
-        private List<Behavior<Entity>> behaviors = new ArrayList<>();
+        private java.util.List<Behavior<Entity>> behaviors = new ArrayList<>();
 
-        private List<Entity> child = new ArrayList<>();
+        private java.util.List<Entity> child = new ArrayList<>();
         private long duration = -1;
         private long life = 0;
         private boolean isStatic = false;
@@ -343,20 +342,21 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
-    public class SpacePartition extends Rectangle2D.Double {
+    public static class SpacePartition extends Rectangle2D.Double {
         private int maxObjectsPerNode = 10;
         private int maxTreeLevels = 5;
 
         private SpacePartition root;
 
         private int level;
-        private List<Entity> objects;
+        private java.util.List<Entity> objects;
         private SpacePartition[] nodes;
 
         /**
-         * Create a new {@link SpacePartition} with a depth level and its defined rectangle area.
+         * Create a new {@link SpacePartition} with a depth level and its defined
+         * rectangle area.
          *
-         * @param pLevel  the  depth level for this {@link SpacePartition}
+         * @param pLevel  the depth level for this {@link SpacePartition}
          * @param pBounds the Rectangle area covered by this {@link SpacePartition}.
          */
         public SpacePartition(int pLevel, Rectangle pBounds) {
@@ -370,10 +370,12 @@ public class KarmaApp extends JPanel implements KeyListener {
          * Initialize the {@link SpacePartition} according to the defined configuration.
          * <p>
          * The configuration file will provide 2 parameters:
-         *     <ul>
-         *         <li><code>app.physic.space.max.entities</code> is the maximum number of entities that a SpacePartition node can contain,</li>
-         *         <li><code>app.physic.space.max.levels</code> is the max Depth level the tree hierarchy can contain.</li>
-         *     </ul>
+         * <ul>
+         * <li><code>app.physic.space.max.entities</code> is the maximum number of
+         * entities that a SpacePartition node can contain,</li>
+         * <li><code>app.physic.space.max.levels</code> is the max Depth level the tree
+         * hierarchy can contain.</li>
+         * </ul>
          * </p>
          *
          * @param app the parent {@link KarmaApp} instance.
@@ -414,8 +416,10 @@ public class KarmaApp extends JPanel implements KeyListener {
         /**
          * Determine which {@link SpacePartition} node the {@link Entity} belongs to.
          *
-         * @param pRect the {@link Entity} to search in the {@link SpacePartition}'s tree.
-         * @return the depth level of the {@link Entity}; -1 means object cannot completely fit
+         * @param pRect the {@link Entity} to search in the {@link SpacePartition}'s
+         *              tree.
+         * @return the depth level of the {@link Entity}; -1 means object cannot
+         * completely fit
          * within a child node and is part of the parent node
          */
         private int getIndex(Entity pRect) {
@@ -423,7 +427,8 @@ public class KarmaApp extends JPanel implements KeyListener {
             double verticalMidpoint = getX() + (getWidth() / 2);
             double horizontalMidpoint = getY() + (getHeight() / 2);
             // Object can completely fit within the top quadrants
-            boolean topQuadrant = (pRect.position.getY() < horizontalMidpoint && pRect.position.getY() + pRect.h < horizontalMidpoint);
+            boolean topQuadrant = (pRect.position.getY() < horizontalMidpoint
+                    && pRect.position.getY() + pRect.h < horizontalMidpoint);
             // Object can completely fit within the bottom quadrants
             boolean bottomQuadrant = (pRect.position.getY() > horizontalMidpoint);
             // Object can completely fit within the left quadrants
@@ -444,7 +449,6 @@ public class KarmaApp extends JPanel implements KeyListener {
             }
             return index;
         }
-
 
         /**
          * Insert the {@link Entity} into the {@link SpacePartition} tree. If the node
@@ -481,7 +485,8 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
 
         /**
-         * Find the {@link Entity} into the {@link SpacePartition} tree and return the list of neighbour's entities.
+         * Find the {@link Entity} into the {@link SpacePartition} tree and return the
+         * list of neighbour's entities.
          *
          * @param e the entity to find.
          * @return a list of neighbour's entities.
@@ -490,7 +495,6 @@ public class KarmaApp extends JPanel implements KeyListener {
             List<Entity> list = new ArrayList<>();
             return find(list, e);
         }
-
 
         /*
          * Return all objects that could collide with the given object
@@ -505,7 +509,8 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
 
         /**
-         * Dispatch all the {@link Scene} {@link Entity}'s into the {@link SpacePartition} tree.
+         * Dispatch all the {@link Scene} {@link Entity}'s into the
+         * {@link SpacePartition} tree.
          *
          * @param scene   the Scene to be processed.
          * @param elapsed the elapsed time since previous call (not used here).
@@ -515,18 +520,16 @@ public class KarmaApp extends JPanel implements KeyListener {
             scene.getEntities().forEach(e -> this.insert(e));
         }
 
-
         public void initialize(KarmaApp app) {
             this.root = this;
         }
 
-
         /**
          * Draw all {@link SpacePartition} nodes with a following color code:
          * <ul>
-         *     <li><code>RED</code> the node is full,</li>
-         *     <li><code>ORANGE</code> the node has entities but is not full,</li>
-         *     <li><code>GREEN</code> the node is empty.</li>
+         * <li><code>RED</code> the node is full,</li>
+         * <li><code>ORANGE</code> the node has entities but is not full,</li>
+         * <li><code>GREEN</code> the node is empty.</li>
          * </ul>
          *
          * @param g     the {@link Graphics2D} API instance
@@ -757,7 +760,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         default void onDraw(KarmaApp a, Graphics2D g, Entity e) {
         }
 
-        default void onCollision(Entity src, Entity dst) {
+        default void onCollision(CollisionEvent ce) {
 
         }
     }
@@ -807,8 +810,70 @@ public class KarmaApp extends JPanel implements KeyListener {
                     .ceil((target.position.y + (target.h * 0.5) - ((viewport.getHeight()) * 0.5) - this.position.y)
                             * tween * Math.min(dt, 10));
 
-            this.viewport.setRect(this.position.x, this.position.y, this.viewport.getWidth(), this.viewport.getHeight());
+            this.viewport.setRect(this.position.x, this.position.y, this.viewport.getWidth(),
+                    this.viewport.getHeight());
         }
+    }
+
+    public static class CollisionEvent {
+
+        private Entity srcCollision;
+        private Entity dstCollision;
+        private Vector2D collisionNormal;
+        private double penetrationDepth;
+        private CollisionSide side;
+
+        public CollisionEvent(Entity src, Entity dst) {
+            srcCollision = src;
+            dstCollision = dst;
+        }
+
+        public Entity getSrc() {
+            return srcCollision;
+        }
+
+        ;
+
+        public Entity getDst() {
+            return dstCollision;
+        }
+
+        ;
+
+        public CollisionEvent setNormal(Vector2D n) {
+            collisionNormal = n;
+            return this;
+        }
+
+        public Vector2D getNormal() {
+            return collisionNormal;
+        }
+
+        public CollisionEvent setPenetrationDepth(double p) {
+            penetrationDepth = p;
+            return this;
+        }
+
+        public double getPenetrationDepth() {
+            return penetrationDepth;
+        }
+
+        public CollisionEvent setCollisionSide(CollisionSide s) {
+            side = s;
+            return this;
+        }
+
+        public CollisionSide getSide() {
+            return side;
+        }
+
+    }
+
+    public enum CollisionSide {
+        TOP,
+        BOTTOM,
+        LEFT,
+        RIGHT;
     }
 
     public KarmaApp() {
@@ -854,10 +919,9 @@ public class KarmaApp extends JPanel implements KeyListener {
         try {
             config.load(this.getClass().getResourceAsStream("/config.properties"));
 
-            List<String> propertyList =
-                    config.entrySet().stream()
-                            .map(e -> String.valueOf(e.getKey()) + "=" + String.valueOf(e.getValue()))
-                            .collect(Collectors.toList());
+            List<String> propertyList = config.entrySet().stream()
+                    .map(e -> String.valueOf(e.getKey()) + "=" + String.valueOf(e.getValue()))
+                    .collect(Collectors.toList());
             parseArguments(propertyList);
 
         } catch (IOException e) {
@@ -953,7 +1017,7 @@ public class KarmaApp extends JPanel implements KeyListener {
                         detectCollision(world, e, d);
                         // update the entity (lifetime and active status)
                         e.update(d);
-                        //update the bounding box for that entity
+                        // update the bounding box for that entity
                         e.updateBox();
                     }
                 });
@@ -1021,7 +1085,7 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     private void detectCollision(World w, Entity e, double d) {
         Collection<Entity> entities = sceneManager.getCurrent().getEntities();
-        //TODO: broad phase detect Entity at proximity cell through a Quadtree
+        // TODO: broad phase detect Entity at proximity cell through a Quadtree
         List<Entity> collisionList = new CopyOnWriteArrayList<>();
         spacePartition.find(collisionList, e);
         collisionCounter = 0;
@@ -1046,36 +1110,55 @@ public class KarmaApp extends JPanel implements KeyListener {
     private void handleCollision(Entity e, Entity o) {
         if (e.box.intersects(o.box)) {
             debug("collision between '%s' and '%s'", e, o);
-            e.getBehaviors().forEach(b -> b.onCollision(e, o));
-            resolveCollision(e, o);
+            // Detect Collision Side
+            CollisionEvent ce = new CollisionEvent(e, o);
+            ce.setNormal(calculateCollisionNormal(e, o));
+            ce.setPenetrationDepth(calculatePenetrationDepth(e, o, ce.getNormal()));
+            if (Math.abs(ce.getNormal().x) > Math.abs(ce.getNormal().y)) {
+                if (ce.getNormal().x > 0) {
+                    ce.setCollisionSide(CollisionSide.RIGHT);
+                } else {
+                    ce.setCollisionSide(CollisionSide.LEFT);
+                }
+            } else {
+                if (ce.getNormal().y > 0) {
+                    ce.setCollisionSide(CollisionSide.BOTTOM);
+                } else {
+                    ce.setCollisionSide(CollisionSide.TOP);
+                }
+            }
+            e.getBehaviors().forEach(b -> b.onCollision(ce));
+            resolveCollision(ce);
             o.getChild().forEach(c -> handleCollision(e, c));
             e.updateBox();
         }
     }
 
-    private void resolveCollision(Entity entity1, Entity entity2) {
+    private void resolveCollision(CollisionEvent ce) {
         // Déterminer le vecteur normal de la collision
-        Vector2D normal = calculateCollisionNormal(entity1, entity2);
+        Vector2D normal = calculateCollisionNormal(ce.getSrc(), ce.getDst());
 
-        // Résoudre la collision en fonction du vecteur normal, de l'élasticité et de la friction
-        Material material1 = entity1.getMaterial();
-        Material material2 = entity2.getMaterial();
+        // Résoudre la collision en fonction du vecteur normal, de l'élasticité et de la
+        // friction
+        Material material1 = ce.getSrc().getMaterial();
+        Material material2 = ce.getDst().getMaterial();
         double elasticity = material1.elasticity * material2.elasticity;
 
         // Calculer les vitesses de collision en tenant compte des masses
-        Vector2D v1 = entity1.getVelocity();
-        Vector2D v2 = entity2.getVelocity();
-        double m1 = entity1.getMass();
-        double m2 = entity2.getMass();
+        Vector2D v1 = ce.getSrc().getVelocity();
+        Vector2D v2 = ce.getDst().getVelocity();
+        double m1 = ce.getSrc().getMass();
+        double m2 = ce.getDst().getMass();
 
         // Calculer la vitesse relative
         Vector2D relativeVelocity = v2.subtract(v1);
         double velocityAlongNormal = relativeVelocity.dot(normal);
 
-        // Ne pas résoudre la collision si les vitesses sont en train de s'éloigner l'une de l'autre
-        //if (velocityAlongNormal > 0) {
-        //    return;
-        //}
+        // Ne pas résoudre la collision si les vitesses sont en train de s'éloigner
+        // l'une de l'autre
+        // if (velocityAlongNormal > 0) {
+        // return;
+        // }
 
         // Calculer l'impulsion scalaire
         double j = -(1 + elasticity) * velocityAlongNormal;
@@ -1083,57 +1166,75 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         // Appliquer l'impulsion aux entités
         Vector2D impulse = normal.multiply(j);
-        if (entity1.getPhysicType().equals(PhysicType.DYNAMIC)) {
-            entity1.setVelocity(v1.subtract(impulse.multiply(1 / m1)));
-            limitVelocity(entity1);
+        if (ce.getSrc().getPhysicType().equals(PhysicType.DYNAMIC)) {
+            ce.getSrc().setVelocity(v1.subtract(impulse.multiply(1 / m1)));
+            limitVelocity(ce.getSrc());
         }
-        if (entity2.getPhysicType().equals(PhysicType.DYNAMIC)) {
-            entity2.setVelocity(v2.add(impulse.multiply(1 / m2)));
-            limitVelocity(entity2);
+        if (ce.getDst().getPhysicType().equals(PhysicType.DYNAMIC)) {
+            ce.getDst().setVelocity(v2.add(impulse.multiply(1 / m2)));
+            limitVelocity(ce.getDst());
         }
 
         // ne fonctionne pas avec le contact des object static...
         // Calcul de la pénétration
-        double penetrationDepth = calculatePenetrationDepth(entity1, entity2, normal);
+        double penetrationDepth = calculatePenetrationDepth(ce.getSrc(), ce.getDst(), normal);
         if (penetrationDepth > 0) {
-            Vector2D velocity1 = entity1.getVelocity();
-            Vector2D velocity2 = entity2.getVelocity();
+            Vector2D velocity1 = ce.getSrc().getVelocity();
+            Vector2D velocity2 = ce.getDst().getVelocity();
 
-            boolean isEntity1Dynamic = entity1.getPhysicType() == PhysicType.DYNAMIC;
-            boolean isEntity2Dynamic = entity2.getPhysicType() == PhysicType.DYNAMIC;
-            boolean isEntity1Static = entity1.getPhysicType() == PhysicType.STATIC;
-            boolean isEntity2Static = entity2.getPhysicType() == PhysicType.STATIC;
+            boolean isEntity1Dynamic = ce.getSrc().getPhysicType() == PhysicType.DYNAMIC;
+            boolean isEntity2Dynamic = ce.getDst().getPhysicType() == PhysicType.DYNAMIC;
+            boolean isEntity1Static = ce.getSrc().getPhysicType() == PhysicType.STATIC;
+            boolean isEntity2Static = ce.getDst().getPhysicType() == PhysicType.STATIC;
 
             if (isEntity1Dynamic && isEntity2Static) {
-                // TODO: buggy pour la detection de plateforme
-                // Dynamic vs Static: Correction basée sur la plus grande composante de la vitesse de l'entité dynamique
-                applyPositionCorrection(entity1, entity2, velocity1, normal);
-                entity1.updateBox();
-                entity1.setVelocity(entity2.getVelocity().multiply(-entity2.getMaterial().elasticity));
+                // Dynamic vs Static: Correction basée sur la plus grande composante de la
+                // vitesse de l'entité dynamique
+                applyPositionCorrection(ce.getSrc(), ce.getDst(), velocity1, normal);
+                ce.getSrc().updateBox();
+                ce.getSrc().setVelocity(ce.getDst().getVelocity().multiply(-ce.getDst().getMaterial().elasticity));
+                // if required apply friction between Static and dynamic object to let object move on the X axis.
+                if (ce.getSide().equals(CollisionSide.BOTTOM)) {
+                    ce.getSrc().getVelocity().setX(
+                            ce.getSrc().getVelocity().getX()
+                                    * ce.getDst().getMaterial().friction
+                                    * ce.getSrc().getMaterial().friction);
+                }
             } else if (isEntity1Static && isEntity2Dynamic) {
-                // TODO: buggy pour la detection de plateforme
-                // Static vs Dynamic: Correction basée sur la plus grande composante de la vitesse de l'entité dynamique
-                applyPositionCorrection(entity2, entity1, velocity2, normal);
-                entity2.updateBox();
-                entity2.setVelocity(entity1.getVelocity().multiply(-entity1.getMaterial().elasticity));
+                // Static vs Dynamic: Correction basée sur la plus grande composante de la
+                // vitesse de l'entité dynamique
+                applyPositionCorrection(ce.getDst(), ce.getSrc(), velocity2, normal);
+                ce.getDst().updateBox();
+                ce.getDst().setVelocity(ce.getSrc().getVelocity().multiply(-ce.getSrc().getMaterial().elasticity));
+                // if required apply friction between Static and dynamic object to let object move on the X axis.
+                if (ce.getSide().equals(CollisionSide.BOTTOM)) {
+                    ce.getSrc().getVelocity().setX(
+                            ce.getSrc().getVelocity().getX()
+                                    * ce.getDst().getMaterial().friction
+                                    * ce.getSrc().getMaterial().friction);
+                }
             } else if (isEntity1Dynamic && isEntity2Dynamic) {
                 // Dynamic vs Dynamic: Correction partagée
-                double totalMass = entity1.getMass() + entity2.getMass();
-                entity1.setPosition(entity1.getPosition().add(normal.multiply(penetrationDepth * (entity2.getMass() / totalMass))));
-                entity2.setPosition(entity2.getPosition().subtract(normal.multiply(penetrationDepth * (entity1.getMass() / totalMass))));
-                entity1.updateBox();
-                entity2.updateBox();
+                double totalMass = ce.getSrc().getMass() + ce.getDst().getMass();
+                ce.getSrc().setPosition(
+                        ce.getSrc().getPosition().add(normal.multiply(penetrationDepth * (ce.getDst().getMass() / totalMass))));
+                ce.getDst().setPosition(ce.getDst().getPosition()
+                        .subtract(normal.multiply(penetrationDepth * (ce.getSrc().getMass() / totalMass))));
+                ce.getSrc().updateBox();
+                ce.getDst().updateBox();
             }
         } else {
-            debug("No collision between '%s' and '%s'", entity1, entity2);
+            debug("No collision between '%s' and '%s'", ce.getSrc(), ce.getDst());
         }
     }
 
     private void applyPositionCorrection(Entity dynEntity, Entity statEntity, Vector2D velocity, Vector2D normal) {
         double sideThreshold = 4;
         // Calculer la profondeur de la pénétration
-        double overlapX = Math.min(dynEntity.box.getMaxX(), statEntity.box.getMaxX()) - Math.max(dynEntity.box.getMinX(), statEntity.box.getMinX());
-        double overlapY = Math.min(dynEntity.box.getMaxY(), statEntity.box.getMaxY()) - Math.max(dynEntity.box.getMinY(), statEntity.box.getMinY());
+        double overlapX = Math.min(dynEntity.box.getMaxX(), statEntity.box.getMaxX())
+                - Math.max(dynEntity.box.getMinX(), statEntity.box.getMinX());
+        double overlapY = Math.min(dynEntity.box.getMaxY(), statEntity.box.getMaxY())
+                - Math.max(dynEntity.box.getMinY(), statEntity.box.getMinY());
 
         // Calculer la direction de la collision
         double velocityX = statEntity.box.getCenterX() - dynEntity.box.getCenterX();
@@ -1428,4 +1529,125 @@ public class KarmaApp extends JPanel implements KeyListener {
         KarmaApp app = new KarmaApp();
         app.run(argc);
     }
+
+    /**
+     * @return boolean return the exit
+     */
+    public boolean isExit() {
+        return exit;
+    }
+
+    /**
+     * @param exit the exit to set
+     */
+    public void setExit(boolean exit) {
+        this.exit = exit;
+    }
+
+    /**
+     * @return JFrame return the frame
+     */
+    public JFrame getFrame() {
+        return frame;
+    }
+
+    /**
+     * @param buffer the buffer to set
+     */
+    public void setBuffer(BufferedImage buffer) {
+        this.buffer = buffer;
+    }
+
+    /**
+     * @return Dimension return the winSize
+     */
+    public Dimension getWinSize() {
+        return winSize;
+    }
+
+    /**
+     * @param winSize the winSize to set
+     */
+    public void setWinSize(Dimension winSize) {
+        this.winSize = winSize;
+    }
+
+    /**
+     * @return Dimension return the resSize
+     */
+    public Dimension getResSize() {
+        return resSize;
+    }
+
+    /**
+     * @param resSize the resSize to set
+     */
+    public void setResSize(Dimension resSize) {
+        this.resSize = resSize;
+    }
+
+    /**
+     * @return int return the strategyBufferNb
+     */
+    public int getStrategyBufferNb() {
+        return strategyBufferNb;
+    }
+
+    /**
+     * @param strategyBufferNb the strategyBufferNb to set
+     */
+    public void setStrategyBufferNb(int strategyBufferNb) {
+        this.strategyBufferNb = strategyBufferNb;
+    }
+
+    /**
+     * @return long return the collisionCounter
+     */
+    public long getCollisionCounter() {
+        return collisionCounter;
+    }
+
+    /**
+     * @param collisionCounter the collisionCounter to set
+     */
+    public void setCollisionCounter(long collisionCounter) {
+        this.collisionCounter = collisionCounter;
+    }
+
+    /**
+     * @param title the title to set
+     */
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    /**
+     * @param world the world to set
+     */
+    public void setWorld(World world) {
+        this.world = world;
+    }
+
+    /**
+     * @param sceneManager the sceneManager to set
+     */
+    public void setSceneManager(SceneManager sceneManager) {
+        this.sceneManager = sceneManager;
+    }
+
+    /**
+     * @return SpacePartition return the spacePartition
+     */
+    public SpacePartition getSpacePartition() {
+        return spacePartition;
+    }
+
+    /**
+     * @param spacePartition the spacePartition to set
+     */
+    public void setSpacePartition(SpacePartition spacePartition) {
+        this.spacePartition = spacePartition;
+    }
+
+
 }
