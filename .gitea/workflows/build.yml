@@ -25,7 +25,9 @@ jobs:
          sdk env install
          sdk env use
          chmod a+x "$HOME/.sdkman/bin/sdkman-init.sh"
-         /root/.sdkman/candidates/maven/current/mvn -B package -DskipTests=true --file pom.xml
+         #/root/.sdkman/candidates/maven/current/mvn -B package -DskipTests=true --file pom.xml
+         chmod +x ./build.sh
+         ./build.sh a
       - uses: https://gitea.com/actions/release-action@main
         with:
           files: |-
