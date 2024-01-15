@@ -110,7 +110,7 @@ public class PlayScene extends AbstractScene {
 
         KarmaApp.Entity platform5 = new KarmaApp.Entity("platform_border_right")
                 .setPosition((int) getWorld().getPlayArea().getWidth() - 16, 16)
-                .setSize(16, (int) getWorld().getPlayArea().getHeight()-16)
+                .setSize(16, (int) getWorld().getPlayArea().getHeight() - 16)
                 .setPhysicType(KarmaApp.PhysicType.STATIC)
                 .setType(KarmaApp.EntityType.RECTANGLE)
                 .setMass(4.0)
@@ -173,8 +173,8 @@ public class PlayScene extends AbstractScene {
             addEntity(
                     new KarmaApp.Entity("enemy_" + i)
                             .setPosition(
-                                    (int) 16+(Math.random() * (getWorld().getPlayArea().getWidth()-32)),
-                                    (int) 16+(Math.random() * (getWorld().getPlayArea().getHeight())-32))
+                                    (int) 16 + (Math.random() * (getWorld().getPlayArea().getWidth() - 32)),
+                                    (int) 16 + (Math.random() * (getWorld().getPlayArea().getHeight()) - 32))
                             .setSize(8, 8)
                             .setPhysicType(KarmaApp.PhysicType.DYNAMIC)
                             .setBackgroundColor(Color.RED)
@@ -189,23 +189,23 @@ public class PlayScene extends AbstractScene {
                             .setAttribute("energy", 20.0)
                             .addBehavior(new KarmaApp.Behavior<KarmaApp.Entity>() {
                                 @Override
-                                public void onCollision(KarmaApp.Entity src, KarmaApp.Entity dst) {
+                                public void onCollision(KarmaApp.CollisionEvent ce) {
                                     // get src Entity energy
-                                    if (src.getAttribute("energy") != null && dst.name.startsWith("player")) {
-                                        double energy = src.getAttribute("energy");
+                                    if (ce.getSrc().getAttribute("energy") != null && ce.getDst().name.startsWith("player")) {
+                                        double energy = ce.getSrc().getAttribute("energy");
                                         // retrieve hit power from dst Entity if exists, else set 1
-                                        double hit = dst.getAttribute("hit") != null ? dst.getAttribute("hit") : 0.1;
+                                        double hit = ce.getDst().getAttribute("hit") != null ? ce.getDst().getAttribute("hit") : 0.1;
                                         // compute new energy for src Entity.
                                         energy -= hit;
                                         if (energy < 10) {
-                                            src.setBorderColor(Color.RED);
-                                            src.setBackgroundColor(Color.ORANGE);
+                                            ce.getSrc().setBorderColor(Color.RED);
+                                            ce.getSrc().setBackgroundColor(Color.ORANGE);
                                         }
                                         if (energy <= 0) {
-                                            src.setActive(false);
+                                            ce.getSrc().setActive(false);
                                             score += 10;
                                         }
-                                        src.setAttribute("energy", energy);
+                                        ce.getSrc().setAttribute("energy", energy);
                                     }
                                 }
                             }));
