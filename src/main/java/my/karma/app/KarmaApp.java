@@ -138,6 +138,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         public String name;
 
         public Vector2D position = new Vector2D(0, 0);
+        public Vector2D size = new Vector2D(0, 0);
         public Vector2D velocity = new Vector2D(0, 0);
         public double w, h;
         public Rectangle2D box = new Rectangle2D.Double();
@@ -342,6 +343,10 @@ public class KarmaApp extends JPanel implements KeyListener {
         public Entity setStatic(boolean s) {
             this.isStatic = s;
             return this;
+        }
+
+        public Vector2D getCenter() {
+            return this.center;
         }
     }
 
@@ -658,6 +663,9 @@ public class KarmaApp extends JPanel implements KeyListener {
             return value;
         }
 
+        public void updateBox(double x, double y, double fontHeight, double textWidth) {
+            this.box = new Rectangle2D.Double(x, y, fontHeight, textWidth);
+        }
     }
 
     public interface Scene {
@@ -1321,7 +1329,7 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     private Vector2D calculateCollisionNormal(Entity entity1, Entity entity2) {
         // Calculer un vecteur normal simplifié basé sur la position des entités
-        Vector2D toEntity2 = entity2.getPosition().subtract(entity1.getPosition());
+        Vector2D toEntity2 = entity2.getCenter().subtract(entity1.getCenter());
         return toEntity2.normalize();
     }
 
@@ -1433,20 +1441,32 @@ public class KarmaApp extends JPanel implements KeyListener {
                 b.onDraw(this, g, e);
             });
         }
-        if (isDebugGreaterThan(3)) {
+        // drawing some debug information.
+        if (isDebugGreaterThan(1)) {
             g.setColor(Color.ORANGE);
             g.setFont(g.getFont().deriveFont(9.0f));
-            g.drawString("#" + e.name, (int) e.getPosition().getX(), (int) e.getPosition().getY());
-
-            // draw collision info
-            e.getCollisions().forEach(ce -> {
-                g.setColor(Color.YELLOW);
-                Vector2D pos2 = e.getPosition()
-                        .add(ce.getNormal())
-                        .multiply(ce.getPenetrationDepth())
-                        .multiply(10.0);
-                g.drawLine((int) e.getPosition().x, (int) e.getPosition().y, (int) pos2.getX(), (int) pos2.getY());
-            });
+            g.drawString("#" + e.name, (int) e.getPosition().getX() - 2, (int) e.getPosition().getY() - 2);
+            g.setStroke(new BasicStroke(0.5f));
+            if (isDebugGreaterThan(2)) {
+                g.draw(e.box);
+            }
+            // draw Velocity
+            g.setColor(Color.CYAN);
+            Vector2D pos1 = e.getPosition().add(e.getVelocity().multiply(100.0).add(new Vector2D(e.w, e.h).multiply(0.5)));
+            g.drawLine(
+                    (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
+                    (int) pos1.getX(), (int) pos1.getY());
+            if (isDebugGreaterThan(3)) {
+                // draw collision normals
+                g.setColor(Color.WHITE);
+                e.getCollisions().forEach(ce -> {
+                    Vector2D pos2 = ce.getSrc().getPosition().add(ce.getNormal().multiply(10.0).add(new Vector2D(e.w, e.h).multiply(0.5)));
+                    g.drawLine(
+                            (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
+                            (int) pos2.getX(), (int) pos2.getY());
+                });
+            }
+            g.setStroke(new BasicStroke(1.0f));
         }
     }
 
@@ -1473,6 +1493,10 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
         g.setColor(to.getTextColor());
         g.drawString(to.getText(), (int) to.position.x, (int) to.position.y);
+        FontMetrics fm = g.getFontMetrics();
+        to.w = fm.stringWidth(to.getText());
+        to.h = fm.getHeight();
+        to.updateBox(to.getPosition().x, to.getPosition().y - to.h, to.w, to.h);
     }
 
     private static void drawEntity(Entity e, Graphics2D g) {
