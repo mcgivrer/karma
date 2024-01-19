@@ -27,24 +27,29 @@ import java.util.stream.Collectors;
  */
 public class KarmaApp extends JPanel implements KeyListener {
 
-    private static final double MAX_VELOCITY = 10.0;
+    private String title = "KarmaApp";
+    private static final double MAX_VELOCITY = 32.0;
     private final ResourceBundle messages = ResourceBundle.getBundle("i18n.messages");
-    private final Properties config = new Properties();
+
     private final int maxEntitiesInSpace = 2;
     private final int maxLevelsInSpace = 4;
     private boolean exit = false;
+
+    private static int debug;
+    private static String debugFilter = "";
+
     private final boolean[] keys = new boolean[1024];
+
     private JFrame frame;
     private BufferedImage buffer;
     private Dimension winSize;
     private Dimension resSize;
     private int strategyBufferNb;
+
     private long collisionCounter = 0;
 
-    private String title = "KarmaApp";
+    private final Configuration config;
     private World world;
-    private static int debug;
-    private static String debugFilter = "";
     private SceneManager sceneManager;
     private SpacePartition spacePartition;
 
@@ -66,6 +71,10 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     public SceneManager getSceneManager() {
         return sceneManager;
+    }
+
+    public Configuration getConfiguration() {
+        return config;
     }
 
     public enum EntityType {
@@ -126,6 +135,79 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         public void setY(double y) {
             this.y = y;
+        }
+    }
+
+    public static class Configuration {
+        private final Properties config;
+        private final KarmaApp app;
+
+        public Configuration(KarmaApp app) {
+            this.app = app;
+            this.config = new Properties();
+        }
+
+        public void load(String path) {
+            try {
+                this.config.load(this.getClass().getResourceAsStream(path));
+                List<String> propertyList = this.config.entrySet().stream()
+                        .map(e -> String.valueOf(e.getKey()) + "=" + String.valueOf(e.getValue()))
+                        .collect(Collectors.toList());
+                parseArguments(propertyList);
+
+            } catch (IOException e) {
+                error("unable to read configuration file: %s", e.getMessage());
+            }
+        }
+
+        public void parseCLI(String[] args) {
+            List<String> lArgs = Arrays.asList(args);
+            if (!lArgs.isEmpty()) {
+                parseArguments(lArgs);
+                lArgs.forEach(s -> {
+                    info("- arg: %s", s);
+                });
+            }
+        }
+
+        public void parseArguments(List<String> lArgs) {
+            lArgs.forEach(s -> {
+                String[] arg = s.split("=");
+                switch (arg[0]) {
+                    case "app.exit" -> app.exit = Boolean.parseBoolean(arg[1]);
+                    case "app.debug" -> debug = Integer.parseInt(arg[1]);
+                    case "app.debug.filter" -> debugFilter = arg[1];
+                    case "app.title" -> app.title = arg[1];
+                    case "app.window.size" -> {
+                        String[] res = arg[1].split("x");
+                        app.winSize = new Dimension(Integer.parseInt(res[0]), Integer.parseInt(res[1]));
+                    }
+                    case "app.rendering.buffer" -> {
+                        String[] res = arg[1].split("x");
+                        app.resSize = new Dimension(Integer.parseInt(res[0]), Integer.parseInt(res[1]));
+                    }
+                    case "app.rendering.strategy" -> app.strategyBufferNb = Integer.parseInt(arg[1]);
+                    case "app.physic.world.play.area" -> {
+                        String[] res = arg[1].split("x");
+                        app.world = new World()
+                                .setPlayArea(
+                                        new Rectangle2D.Double(0, 0,
+                                                Integer.parseInt(res[0]), Integer.parseInt(res[1])));
+                    }
+                    case "app.physic.world.gravity" -> {
+                        app.world.setGravity(Double.parseDouble(arg[1]));
+                    }
+                    case "app.scenes.list" -> {
+                        app.sceneManager = new SceneManager(app);
+                        app.sceneManager.load(arg[1]);
+                    }
+                    case "app.scenes.default" -> {
+                        app.sceneManager.setDefaultSceneName(arg[1]);
+                    }
+
+                    default -> error("Unknown %s attribute ", s);
+                }
+            });
         }
     }
 
@@ -923,7 +1005,8 @@ public class KarmaApp extends JPanel implements KeyListener {
         info("Initialization karmaApp %s (%s)%n",
                 messages.getString("app.name"),
                 messages.getString("app.version"));
-        loadConfiguration();
+        config = new Configuration(this);
+        config.load("/config.properties");
     }
 
     public void run(String[] args) {
@@ -934,7 +1017,7 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     private void init(String[] args) {
         // get configuration values.
-        parseCLI(args);
+        config.parseCLI(args);
         // Create window
         frame = new JFrame(String.format("%s (%s)",
                 messages.getString("app.name"),
@@ -955,68 +1038,6 @@ public class KarmaApp extends JPanel implements KeyListener {
         spacePartition = new SpacePartition(this);
     }
 
-    private void loadConfiguration() {
-        try {
-            config.load(this.getClass().getResourceAsStream("/config.properties"));
-            List<String> propertyList = config.entrySet().stream()
-                    .map(e -> String.valueOf(e.getKey()) + "=" + String.valueOf(e.getValue()))
-                    .collect(Collectors.toList());
-            parseArguments(propertyList);
-
-        } catch (IOException e) {
-            error("unable to read configuration file: %s", e.getMessage());
-        }
-    }
-
-    private void parseCLI(String[] args) {
-        List<String> lArgs = Arrays.asList(args);
-        if (!lArgs.isEmpty()) {
-            parseArguments(lArgs);
-            lArgs.forEach(s -> {
-                info("- arg: %s", s);
-            });
-        }
-    }
-
-    private void parseArguments(List<String> lArgs) {
-        lArgs.forEach(s -> {
-            String[] arg = s.split("=");
-            switch (arg[0]) {
-                case "app.exit" -> exit = Boolean.parseBoolean(arg[1]);
-                case "app.debug" -> debug = Integer.parseInt(arg[1]);
-                case "app.debug.filter" -> debugFilter = arg[1];
-                case "app.title" -> title = arg[1];
-                case "app.window.size" -> {
-                    String[] res = arg[1].split("x");
-                    winSize = new Dimension(Integer.parseInt(res[0]), Integer.parseInt(res[1]));
-                }
-                case "app.rendering.buffer" -> {
-                    String[] res = arg[1].split("x");
-                    resSize = new Dimension(Integer.parseInt(res[0]), Integer.parseInt(res[1]));
-                }
-                case "app.rendering.strategy" -> strategyBufferNb = Integer.parseInt(arg[1]);
-                case "app.physic.world.play.area" -> {
-                    String[] res = arg[1].split("x");
-                    world = new World()
-                            .setPlayArea(
-                                    new Rectangle2D.Double(0, 0,
-                                            Integer.parseInt(res[0]), Integer.parseInt(res[1])));
-                }
-                case "app.physic.world.gravity" -> {
-                    world.setGravity(Double.parseDouble(arg[1]));
-                }
-                case "app.scenes.list" -> {
-                    sceneManager = new SceneManager(this);
-                    sceneManager.load(arg[1]);
-                }
-                case "app.scenes.default" -> {
-                    sceneManager.setDefaultSceneName(arg[1]);
-                }
-
-                default -> error("Unknown %s attribute ", s);
-            }
-        });
-    }
 
     private void loop() {
         sceneManager.start("title");
