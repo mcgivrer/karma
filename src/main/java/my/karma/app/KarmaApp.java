@@ -1,8 +1,5 @@
 package my.karma.app;
 
-import my.karma.app.scenes.PlayScene;
-import my.karma.app.scenes.TitleScene;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -12,6 +9,8 @@ import java.awt.geom.RectangularShape;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -371,8 +370,8 @@ public class KarmaApp extends JPanel implements KeyListener {
         private SpacePartition root;
 
         private int level;
-        private java.util.List<Entity> objects;
-        private SpacePartition[] nodes;
+        private final java.util.List<Entity> objects;
+        private final SpacePartition[] nodes;
 
         /**
          * Create a new {@link SpacePartition} with a depth level and its defined
@@ -503,7 +502,7 @@ public class KarmaApp extends JPanel implements KeyListener {
                 }
             }
             // insert all children Entity
-            pRect.getChild().forEach(c -> insert(c));
+            pRect.getChild().forEach(this::insert);
         }
 
         /**
@@ -521,7 +520,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         /*
          * Return all objects that could collide with the given object
          */
-        private List find(List returnObjects, Entity pRect) {
+        private List<Entity> find(List<Entity> returnObjects, Entity pRect) {
             int index = getIndex(pRect);
             if (index != -1 && nodes[0] != null) {
                 nodes[index].find(returnObjects, pRect);
@@ -539,7 +538,7 @@ public class KarmaApp extends JPanel implements KeyListener {
          */
         public void update(Scene scene, double elapsed) {
             this.clear();
-            scene.getEntities().forEach(e -> this.insert(e));
+            scene.getEntities().forEach(this::insert);
         }
 
         public void initialize(KarmaApp app) {
@@ -653,7 +652,7 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         public TextObject setValue(Object v) {
             this.value = v;
-            if (!this.format.equals("")) {
+            if (!this.format.isEmpty()) {
                 this.text = String.format(this.format, value);
             }
             return this;
@@ -704,9 +703,10 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     public static class SceneManager {
-        private KarmaApp app;
+        private final KarmaApp app;
         private Scene current;
-        private Map<String, Scene> scenes = new HashMap<>();
+        private final Map<String, Scene> scenes = new HashMap<>();
+        private String defaultSceneName = "";
 
         public SceneManager(KarmaApp app) {
             this.app = app;
@@ -718,7 +718,7 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         public void start() {
             if (Optional.ofNullable(current).isEmpty()) {
-                start("init");
+                start(defaultSceneName.isEmpty() ? "init" : defaultSceneName);
             }
         }
 
@@ -746,15 +746,33 @@ public class KarmaApp extends JPanel implements KeyListener {
             String[] sceneItems = strList.split(",");
             Arrays.stream(sceneItems).forEach(item -> {
                 String[] attrs = item.split(":");
-
+                // Create Scene instance according to the defined class.
+                try {
+                    Class<?> sceneClass = Class.forName(attrs[1]);
+                    Constructor<?> cstr = sceneClass.getConstructor(KarmaApp.class);
+                    Scene scene = (Scene) cstr.newInstance(this.app);
+                    scenes.put(scene.getTitle(), scene);
+                } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
+                         IllegalAccessException | InvocationTargetException e) {
+                    error("Can not create the %s class: %s%n", attrs[1], e.getMessage());
+                }
             });
+        }
+
+        public void setDefaultSceneName(String s) {
+            this.defaultSceneName = s;
         }
     }
 
     public static class World {
 
-        Rectangle2D playArea = new Rectangle2D.Double(0, 0, 1000, 1000);
-        double gravity = 0.981;
+        Rectangle2D playArea;
+        double gravity;
+
+        public World() {
+            gravity = 0.981;
+            playArea = new Rectangle2D.Double(0, 0, 1000, 1000);
+        }
 
         public World setGravity(double g) {
             this.gravity = g;
@@ -842,8 +860,8 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     public static class CollisionEvent {
 
-        private Entity srcCollision;
-        private Entity dstCollision;
+        private final Entity srcCollision;
+        private final Entity dstCollision;
         private Vector2D collisionNormal;
         private double penetrationDepth;
         private CollisionSide side;
@@ -935,15 +953,11 @@ public class KarmaApp extends JPanel implements KeyListener {
         buffer = new BufferedImage(resSize.width, resSize.height, BufferedImage.TYPE_4BYTE_ABGR);
 
         spacePartition = new SpacePartition(this);
-
-        sceneManager.add(new TitleScene(this));
-        sceneManager.add(new PlayScene(this));
     }
 
     private void loadConfiguration() {
         try {
             config.load(this.getClass().getResourceAsStream("/config.properties"));
-
             List<String> propertyList = config.entrySet().stream()
                     .map(e -> String.valueOf(e.getKey()) + "=" + String.valueOf(e.getValue()))
                     .collect(Collectors.toList());
@@ -981,13 +995,14 @@ public class KarmaApp extends JPanel implements KeyListener {
                     resSize = new Dimension(Integer.parseInt(res[0]), Integer.parseInt(res[1]));
                 }
                 case "app.rendering.strategy" -> strategyBufferNb = Integer.parseInt(arg[1]);
-                case "app.physic.play.area" -> {
+                case "app.physic.world.play.area" -> {
                     String[] res = arg[1].split("x");
                     world = new World()
-                            .setPlayArea(new Rectangle2D.Double(0, 0,
-                                    Integer.parseInt(res[0]), Integer.parseInt(res[1])));
+                            .setPlayArea(
+                                    new Rectangle2D.Double(0, 0,
+                                            Integer.parseInt(res[0]), Integer.parseInt(res[1])));
                 }
-                case "app.physic.gravity" -> {
+                case "app.physic.world.gravity" -> {
                     world.setGravity(Double.parseDouble(arg[1]));
                 }
                 case "app.scenes.list" -> {
@@ -995,7 +1010,7 @@ public class KarmaApp extends JPanel implements KeyListener {
                     sceneManager.load(arg[1]);
                 }
                 case "app.scenes.default" -> {
-
+                    sceneManager.setDefaultSceneName(arg[1]);
                 }
 
                 default -> error("Unknown %s attribute ", s);
@@ -1023,9 +1038,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         // process all input behaviors
         sceneManager.getCurrent().getEntities().stream()
                 .filter(KarmaApp.Entity::isActive)
-                .forEach(e -> {
-                    processInput(e);
-                });
+                .forEach(this::processInput);
     }
 
     public void processInput(Entity e) {
@@ -1036,7 +1049,7 @@ public class KarmaApp extends JPanel implements KeyListener {
             });
         }
         // apply child's behaviors.
-        e.getChild().forEach(c -> processInput(c));
+        e.getChild().forEach(this::processInput);
     }
 
     public void update(long d) {
@@ -1167,7 +1180,7 @@ public class KarmaApp extends JPanel implements KeyListener {
             e.add(ce);
             o.getChild().forEach(c -> handleCollision(e, c));
             e.updateBox();
-            if (debugFilter.contains(e.name) || debugFilter.equals("")) {
+            if (debugFilter.contains(e.name) || debugFilter.isEmpty()) {
                 debug("handle collision on %s between '%s' and '%s'", ce.side, ce.getSrc(), ce.getDst());
             }
         }
@@ -1265,7 +1278,10 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
-    private void applyPositionCorrection(Entity dynEntity, Entity statEntity, Vector2D velocity, Vector2D normal) {
+    private void applyPositionCorrection(Entity dynEntity,
+                                         Entity statEntity,
+                                         Vector2D velocity,
+                                         Vector2D normal) {
         double sideThreshold = 4;
         // Calculer la profondeur de la pénétration
         double overlapX = Math.min(dynEntity.box.getMaxX(), statEntity.box.getMaxX())
@@ -1365,6 +1381,7 @@ public class KarmaApp extends JPanel implements KeyListener {
                     }
                 });
         sceneManager.getCurrent().draw(this, g);
+
         if (isDebugGreaterThan(3)) {
             if (Optional.ofNullable(cam).isPresent()) {
                 g.translate(
@@ -1380,6 +1397,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
         // free API
         g.dispose();
+
         // Copy buffer to window.
         BufferStrategy bs = frame.getBufferStrategy();
         // configure renderer for antialiasing.
@@ -1394,6 +1412,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         if (isDebugGreaterThan(1)) {
             displayDebugLineOnScreen(entities, gs);
         }
+
         // Switch buffer strategy
         bs.show();
         // free API
@@ -1445,7 +1464,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         if (isDebugGreaterThan(1)) {
             g.setColor(Color.ORANGE);
             g.setFont(g.getFont().deriveFont(9.0f));
-            g.drawString("#" + e.name, (int) e.getPosition().getX() - 2, (int) e.getPosition().getY() - 2);
+            g.drawString("#" + e.id + "=" + e.name, (int) e.getPosition().getX() - 2, (int) e.getPosition().getY() - 2);
             g.setStroke(new BasicStroke(0.5f));
             if (isDebugGreaterThan(2)) {
                 g.draw(e.box);
@@ -1460,7 +1479,11 @@ public class KarmaApp extends JPanel implements KeyListener {
                 // draw collision normals
                 g.setColor(Color.WHITE);
                 e.getCollisions().forEach(ce -> {
-                    Vector2D pos2 = ce.getSrc().getPosition().add(ce.getNormal().multiply(10.0).add(new Vector2D(e.w, e.h).multiply(0.5)));
+                    Vector2D pos2 = ce.getSrc().getPosition()
+                            .add(ce.getNormal()
+                                    .multiply(10.0)
+                                    .add(new Vector2D(e.w, e.h)
+                                            .multiply(0.5)));
                     g.drawLine(
                             (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
                             (int) pos2.getX(), (int) pos2.getY());
@@ -1575,7 +1598,7 @@ public class KarmaApp extends JPanel implements KeyListener {
             // [D] will switch debug level from off to 1-5.
             case KeyEvent.VK_D -> {
                 // switch debug mode to next level (1->5) or switch off (0)
-                this.debug = this.debug + 1 < 6 ? this.debug + 1 : 0;
+                debug = debug + 1 < 6 ? debug + 1 : 0;
             }
             default -> {
                 // Nothing to do.
