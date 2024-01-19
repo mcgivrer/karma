@@ -8,6 +8,8 @@ import my.karma.app.behaviors.PlayerInputBehavior;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class PlayScene extends AbstractScene {
 
@@ -85,7 +87,7 @@ public class PlayScene extends AbstractScene {
         addEntity(platform2);
 
         KarmaApp.Entity platform3 = new KarmaApp.Entity("platform_border_bottom")
-                .setPosition(0, getWorld().getPlayArea().getHeight())
+                .setPosition(0, getWorld().getPlayArea().getHeight() - 16)
                 .setSize((int) getWorld().getPlayArea().getWidth(), 16)
                 .setPhysicType(KarmaApp.PhysicType.STATIC)
                 .setType(KarmaApp.EntityType.RECTANGLE)
@@ -259,6 +261,28 @@ public class PlayScene extends AbstractScene {
                             });
                 }
             }
+            case KeyEvent.VK_PAGE_UP -> {
+                generateEnemies(10);
+            }
+            case KeyEvent.VK_PAGE_DOWN -> {
+                removeEnemies(10);
+            }
+            case KeyEvent.VK_DELETE -> {
+                removeEnemies(0);
+            }
+
         }
     }
+
+    private void removeEnemies(int nbEnemies) {
+        List<KarmaApp.Entity> entitiesToDelete = getEntities().stream().filter(e -> e.name.startsWith("enemy_")).toList();
+        if (nbEnemies == 0) {
+            entitiesToDelete.forEach(e -> getEntities().remove(e));
+        } else {
+            for (int i = 0; i < (Math.min(entitiesToDelete.size(), nbEnemies)); i++) {
+                getEntities().remove(entitiesToDelete.get(i));
+            }
+        }
+    }
+
 }
