@@ -50,6 +50,10 @@ public class KarmaApp extends JPanel implements KeyListener {
 
     private final Configuration config;
     private World world;
+    private Vector2D physicVelocityMax = new Vector2D(0, 0);
+    private Vector2D physicAccelerationMax = new Vector2D(0, 0);
+
+
     private SceneManager sceneManager;
     private SpacePartition spacePartition;
 
@@ -136,6 +140,20 @@ public class KarmaApp extends JPanel implements KeyListener {
         public void setY(double y) {
             this.y = y;
         }
+
+        public Vector2D addAll(List<Vector2D> forces) {
+            Vector2D total = new Vector2D(0, 0);
+            for (Vector2D f : forces) {
+                total = total.add(f);
+            }
+            return total;
+        }
+
+        public Vector2D limit(Vector2D limitMax) {
+            this.x = Math.signum(x) * Math.min(Math.abs(this.x), limitMax.x);
+            this.y = Math.signum(y) * Math.min(Math.abs(this.y), limitMax.y);
+            return this;
+        }
     }
 
     public static class Configuration {
@@ -197,6 +215,14 @@ public class KarmaApp extends JPanel implements KeyListener {
                     case "app.physic.world.gravity" -> {
                         app.world.setGravity(Double.parseDouble(arg[1]));
                     }
+                    case "app.physic.velocity.max" -> {
+                        String[] vals = arg[1].substring("(".length(), arg[1].length() - ")".length()).split(",");
+                        app.physicVelocityMax = new Vector2D(Double.parseDouble(vals[0]), Double.parseDouble(vals[1]));
+                    }
+                    case "app.physic.acceleration.max" -> {
+                        String[] vals = arg[1].substring("(".length(), arg[1].length() - ")".length()).split(",");
+                        app.physicAccelerationMax = new Vector2D(Double.parseDouble(vals[0]), Double.parseDouble(vals[1]));
+                    }
                     case "app.scenes.list" -> {
                         app.sceneManager = new SceneManager(app);
                         app.sceneManager.load(arg[1]);
@@ -219,9 +245,11 @@ public class KarmaApp extends JPanel implements KeyListener {
         public String name;
 
         public Vector2D position = new Vector2D(0, 0);
-        public Vector2D size = new Vector2D(0, 0);
         public Vector2D velocity = new Vector2D(0, 0);
+        public Vector2D acceleration = new Vector2D(0, 0);
+        public List<Vector2D> forces = new ArrayList<>();
         public double w, h;
+        public Vector2D size = new Vector2D(0, 0);
         public Rectangle2D box = new Rectangle2D.Double();
         private Vector2D center;
 
@@ -250,7 +278,12 @@ public class KarmaApp extends JPanel implements KeyListener {
             return this;
         }
 
-        public Entity add(CollisionEvent ce) {
+        public Entity addForce(Vector2D f) {
+            this.forces.add(f);
+            return this;
+        }
+
+        public Entity register(CollisionEvent ce) {
             collisions.add(ce);
             return this;
         }
@@ -263,7 +296,7 @@ public class KarmaApp extends JPanel implements KeyListener {
             return child;
         }
 
-        public Entity clearCollisions() {
+        public Entity clearRegisteredCollisions() {
             this.collisions.clear();
             return this;
         }
@@ -292,6 +325,17 @@ public class KarmaApp extends JPanel implements KeyListener {
             updateBox();
             return this;
         }
+
+        public Entity setAcceleration(double ax, double ay) {
+            this.acceleration = new Vector2D(ax, ay);
+            return this;
+        }
+
+        public Entity setAcceleration(Vector2D a) {
+            this.acceleration = a;
+            return this;
+        }
+
 
         public Entity setVelocity(double dx, double dy) {
             this.velocity = new Vector2D(dx, dy);
@@ -400,6 +444,10 @@ public class KarmaApp extends JPanel implements KeyListener {
             return velocity;
         }
 
+        public Vector2D getAcceleration() {
+            return acceleration;
+        }
+
         public Vector2D getPosition() {
             return position;
         }
@@ -428,6 +476,11 @@ public class KarmaApp extends JPanel implements KeyListener {
 
         public Vector2D getCenter() {
             return this.center;
+        }
+
+        public Entity resetForces() {
+            forces.clear();
+            return this;
         }
     }
 
@@ -1100,9 +1153,13 @@ public class KarmaApp extends JPanel implements KeyListener {
     private void applyPhysics(Entity e, World w, long d) {
         // apply velocity computation
         if (e.getPhysicType().equals(PhysicType.DYNAMIC)) {
+            e.acceleration = e.acceleration.addAll(e.forces)
+                    .add(new Vector2D(0, (w.getGravity() * 0.001)))
+                    .limit(physicAccelerationMax);
+            e.velocity = e.velocity.add(e.acceleration.multiply(d))
+                    .limit(physicVelocityMax);
             // compute position according to velocity
-            e.position = e.position.add(e.getVelocity().multiply(d))
-                    .add(new Vector2D(0, (w.getGravity() * 0.1)).multiply(d));
+            e.position = e.position.add(e.getVelocity().multiply(d));
             e.updateBox();
             // apply friction
             e.setVelocity(e.getVelocity().multiply(e.getMaterial().friction));
@@ -1122,6 +1179,7 @@ public class KarmaApp extends JPanel implements KeyListener {
                 applyPhysics(c, world, d);
                 detectCollision(world, c, d);
             });
+            e.resetForces();
         }
 
     }
@@ -1158,7 +1216,7 @@ public class KarmaApp extends JPanel implements KeyListener {
         List<Entity> collisionList = new CopyOnWriteArrayList<>();
         spacePartition.find(collisionList, e);
         collisionCounter = 0;
-        e.clearCollisions();
+        e.clearRegisteredCollisions();
         collisionList.forEach(o -> {
             if (e.isActive() && !o.equals(e) && o.isActive()
                     && !o.getPhysicType().equals(PhysicType.NONE)) {
@@ -1198,7 +1256,7 @@ public class KarmaApp extends JPanel implements KeyListener {
             }
             e.getBehaviors().forEach(b -> b.onCollision(ce));
             resolveCollision(ce);
-            e.add(ce);
+            e.register(ce);
             o.getChild().forEach(c -> handleCollision(e, c));
             e.updateBox();
             if (debugFilter.contains(e.name) || debugFilter.isEmpty()) {
