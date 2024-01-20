@@ -1,5 +1,6 @@
 package my.karma.app.scenes;
 
+import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 
 import my.karma.app.AbstractScene;
@@ -27,6 +28,7 @@ public class PlayScene extends AbstractScene {
 
     @Override
     public void create(KarmaApp app) {
+        getWorld().setGravity(0.981);
 
         createPlatforms(app);
 
@@ -41,12 +43,12 @@ public class PlayScene extends AbstractScene {
                 .setPosition(160, 30)
                 .setPhysicType(KarmaApp.PhysicType.DYNAMIC)
                 .setSize(16, 16)
-                .setMaterial(new KarmaApp.Material(0.98, 1.0, 0.25))
+                .setMaterial(new KarmaApp.Material(0.9998, 1.0, 0.85))
                 .setMass(20.0)
                 .setBorderColor(new Color(0.0f, 0.0f, 0.6f, 1.0f))
                 .setBackgroundColor(Color.BLUE)
                 .setPriority(1)
-                .setAttribute("speedStep", 0.015)
+                .setAttribute("speedStep", 0.0045)
                 .setAttribute("energy", 100.0)
                 .setAttribute("mana", 100.0)
                 .setAttribute("hit", 1.0)
@@ -62,18 +64,7 @@ public class PlayScene extends AbstractScene {
     }
 
     private void createPlatforms(KarmaApp app) {
-        KarmaApp.Material platformMat = new KarmaApp.Material(1.0, 1.0, 0.1);
-        KarmaApp.Entity platform1 = new KarmaApp.Entity("platform_01")
-                .setPosition(100, 100)
-                .setSize(100, 32)
-                .setPhysicType(KarmaApp.PhysicType.STATIC)
-                .setType(KarmaApp.EntityType.RECTANGLE)
-                .setMass(4.0)
-                .setBorderColor(Color.GRAY)
-                .setBackgroundColor(Color.DARK_GRAY)
-                .setPriority(10)
-                .setMaterial(platformMat);
-        addEntity(platform1);
+        KarmaApp.Material platformMat = new KarmaApp.Material(1.0, 1.0, 0.89);
 
         KarmaApp.Entity platform2 = new KarmaApp.Entity("platform_border_top")
                 .setPosition(0, 0)
@@ -101,7 +92,7 @@ public class PlayScene extends AbstractScene {
 
         KarmaApp.Entity platform4 = new KarmaApp.Entity("platform_border_left")
                 .setPosition(0, 16)
-                .setSize(16, (int) getWorld().getPlayArea().getHeight()-16)
+                .setSize(16, (int) getWorld().getPlayArea().getHeight() - 16)
                 .setPhysicType(KarmaApp.PhysicType.STATIC)
                 .setType(KarmaApp.EntityType.RECTANGLE)
                 .setMass(4.0)
@@ -122,7 +113,22 @@ public class PlayScene extends AbstractScene {
                 .setPriority(10)
                 .setMaterial(platformMat);
         addEntity(platform5);
-
+        for (int j = 0; j < 10; j++) {
+            KarmaApp.Entity platform1 = new KarmaApp.Entity("platform_" + j)
+                    .setPosition(
+                            (Math.random() * (getWorld().getPlayArea().getWidth() / 16.0) * 16.0),
+                            (Math.random() * (getWorld().getPlayArea().getHeight() / 16.0) * 16.0))
+                    .setSize(
+                            (int) (Math.random() * 5 * 16.0), 16)
+                    .setPhysicType(KarmaApp.PhysicType.STATIC)
+                    .setType(KarmaApp.EntityType.RECTANGLE)
+                    .setMass(4.0)
+                    .setBorderColor(Color.GRAY)
+                    .setBackgroundColor(Color.DARK_GRAY)
+                    .setPriority(10)
+                    .setMaterial(platformMat);
+            addEntity(platform1);
+        }
     }
 
     private void createHUD(KarmaApp app) {
@@ -187,7 +193,7 @@ public class PlayScene extends AbstractScene {
                             .setVelocity(
                                     (0.5 - Math.random()) * 0.25,
                                     (0.5 - Math.random()) * 0.25)
-                            .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.99))
+                            .setMaterial(new KarmaApp.Material(0.98, 1.0, 0.99))
                             .setMass(5.0)
                             .setAttribute("energy", 20.0)
                             .addBehavior(new KarmaApp.Behavior<KarmaApp.Entity>() {
@@ -211,6 +217,28 @@ public class PlayScene extends AbstractScene {
                                         ce.getSrc().setAttribute("energy", energy);
                                     }
                                 }
+                            }).addBehavior(new KarmaApp.Behavior<KarmaApp.Entity>() {
+                                @Override
+                                public void onUpdate(KarmaApp a, KarmaApp.Entity e, double d) {
+                                    KarmaApp.Entity player = getEntity("player");
+                                    if (player.getCenter().getDistance(e.getCenter()) < 50.0) {
+                                        KarmaApp.Vector2D v = player.getVelocity().subtract(e.getPosition());
+                                        e.setVelocity(v.multiply(-0.0001));
+                                    }
+                                }
+
+                                @Override
+                                public void onDraw(KarmaApp a, Graphics2D g, KarmaApp.Entity e) {
+                                    if (KarmaApp.isDebugGreaterThan(3)) {
+                                        g.setColor(Color.YELLOW);
+                                        g.setStroke(new BasicStroke(0.05f));
+                                        g.draw(
+                                                new Ellipse2D.Double(
+                                                        (int) e.getCenter().x - e.w, (int) e.getCenter().y - e.h,
+                                                        (int) 50.0, (int) 50.0));
+                                    }
+
+                                }
                             }));
         }
     }
@@ -222,7 +250,7 @@ public class PlayScene extends AbstractScene {
     }
 
     @Override
-    public void update(KarmaApp app, long d) {
+    public void update(KarmaApp app, double d) {
         ((KarmaApp.TextObject) getEntity("lives")).setValue(lives);
         ((KarmaApp.TextObject) getEntity("score")).setValue(score);
     }
