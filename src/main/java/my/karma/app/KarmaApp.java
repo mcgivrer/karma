@@ -13,8 +13,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
@@ -52,30 +52,6 @@ public class KarmaApp extends JPanel implements KeyListener {
     private World world;
     private SceneManager sceneManager;
     private SpacePartition spacePartition;
-
-    public Dimension getScreenSize() {
-        return resSize;
-    }
-
-    public World getWorld() {
-        return world;
-    }
-
-    public boolean isKeyPressed(int vkKeyCode) {
-        return keys[vkKeyCode];
-    }
-
-    public String getMessage(String keyMsg) {
-        return messages.getString(keyMsg);
-    }
-
-    public SceneManager getSceneManager() {
-        return sceneManager;
-    }
-
-    public Configuration getConfiguration() {
-        return config;
-    }
 
     public enum EntityType {
         RECTANGLE,
@@ -151,7 +127,7 @@ public class KarmaApp extends JPanel implements KeyListener {
             try {
                 this.config.load(this.getClass().getResourceAsStream(path));
                 List<String> propertyList = this.config.entrySet().stream()
-                        .map(e -> String.valueOf(e.getKey()) + "=" + String.valueOf(e.getValue()))
+                        .map(e -> e.getKey() + "=" + e.getValue())
                         .collect(Collectors.toList());
                 parseArguments(propertyList);
 
@@ -164,9 +140,7 @@ public class KarmaApp extends JPanel implements KeyListener {
             List<String> lArgs = Arrays.asList(args);
             if (!lArgs.isEmpty()) {
                 parseArguments(lArgs);
-                lArgs.forEach(s -> {
-                    info("- arg: %s", s);
-                });
+                lArgs.forEach(s -> info("- arg: %s", s));
             }
         }
 
@@ -194,16 +168,12 @@ public class KarmaApp extends JPanel implements KeyListener {
                                         new Rectangle2D.Double(0, 0,
                                                 Integer.parseInt(res[0]), Integer.parseInt(res[1])));
                     }
-                    case "app.physic.world.gravity" -> {
-                        app.world.setGravity(Double.parseDouble(arg[1]));
-                    }
+                    case "app.physic.world.gravity" -> app.world.setGravity(Double.parseDouble(arg[1]));
                     case "app.scenes.list" -> {
                         app.sceneManager = new SceneManager(app);
                         app.sceneManager.load(arg[1]);
                     }
-                    case "app.scenes.default" -> {
-                        app.sceneManager.setDefaultSceneName(arg[1]);
-                    }
+                    case "app.scenes.default" -> app.sceneManager.setDefaultSceneName(arg[1]);
 
                     default -> error("Unknown %s attribute ", s);
                 }
@@ -232,14 +202,14 @@ public class KarmaApp extends JPanel implements KeyListener {
         private int priority = 1;
         private final Map<String, Object> attributes = new ConcurrentHashMap<>();
         private EntityType type = EntityType.RECTANGLE;
-        private java.util.List<Behavior<Entity>> behaviors = new ArrayList<>();
+        private final java.util.List<Behavior<Entity>> behaviors = new ArrayList<>();
 
-        private java.util.List<Entity> child = new ArrayList<>();
+        private final java.util.List<Entity> child = new ArrayList<>();
         private long duration = -1;
         private long life = 0;
         private boolean isStatic = false;
 
-        private Collection<CollisionEvent> collisions = new ArrayList<>();
+        private final Collection<CollisionEvent> collisions = new ArrayList<>();
 
         public Entity(String name) {
             this.name = name;
@@ -876,7 +846,7 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
     public interface Behavior<Entity> {
-        default void onUpdate(KarmaApp a, Entity e, long d) {
+        default void onUpdate(KarmaApp a, Entity e, double d) {
         }
 
         default void onInput(KarmaApp a, Entity e) {
@@ -1001,6 +971,11 @@ public class KarmaApp extends JPanel implements KeyListener {
         RIGHT;
     }
 
+
+    /**
+     * ---- Where everything start ----
+     */
+
     public KarmaApp() {
         info("Initialization karmaApp %s (%s)%n",
                 messages.getString("app.name"),
@@ -1015,6 +990,11 @@ public class KarmaApp extends JPanel implements KeyListener {
         dispose();
     }
 
+    /**
+     * Initialization of the Application by parsing the CLI arguments.
+     *
+     * @param args list of command line arguments.
+     */
     private void init(String[] args) {
         // get configuration values.
         config.parseCLI(args);
@@ -1039,6 +1019,15 @@ public class KarmaApp extends JPanel implements KeyListener {
     }
 
 
+    /**
+     * The main game loop where all the 3 steps for the game are executed:
+     *
+     * <ul>
+     *     <li>manage <code>input()</code>,</li>
+     *     <li>process <code>update()</code>,</li>
+     *     <li>render everything with  <code>draw()</code>.</li>
+     * </ul>
+     */
     private void loop() {
         sceneManager.start("title");
         long current = System.currentTimeMillis();
@@ -1054,6 +1043,10 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
+    /**
+     * Manage all the user inputs declared into the active {@link Scene} instance,
+     * and all the {@link Behavior}'s on {@link Scene}'s {@link Entity}.
+     */
     public void input() {
         sceneManager.getCurrent().input(this);
         // process all input behaviors
@@ -1062,6 +1055,11 @@ public class KarmaApp extends JPanel implements KeyListener {
                 .forEach(this::processInput);
     }
 
+    /**
+     * Process the specific input for an {@link Entity}
+     *
+     * @param e the Entity to process <code>onInput()</code> form its {@link Behavior}.
+     */
     public void processInput(Entity e) {
         // apply entity's behaviors
         if (!e.getBehaviors().isEmpty()) {
@@ -1073,6 +1071,16 @@ public class KarmaApp extends JPanel implements KeyListener {
         e.getChild().forEach(this::processInput);
     }
 
+    /**
+     * Process everything about game mechanics at
+     * <ul>
+     *     <li>physic engine level,</li>
+     *     <li>at {@link Scene} Level,</li>
+     *     <li>and at {@link Entity}'s level.</li>
+     * </ul>
+     *
+     * @param d ths is the elapsed time since the previous call.
+     */
     public void update(long d) {
         Collection<Entity> entities = sceneManager.getCurrent().getEntities();
         cullingProcess(this, d);
@@ -1081,7 +1089,7 @@ public class KarmaApp extends JPanel implements KeyListener {
                 .forEach(e -> {
                     if (!e.getPhysicType().equals(PhysicType.NONE)) {
                         // compute physic on the Entity (velocity & position)
-                        applyPhysics(e, world, d);
+                        applyPhysics(world, e, d);
                         // detect collision and apply response
                         detectCollision(world, e, d);
                         // update the entity (lifetime and active status)
@@ -1097,7 +1105,15 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
-    private void applyPhysics(Entity e, World w, long d) {
+    /**
+     * Apply the physic mechanics from the physic engine on the specified {@link Entity} instance,
+     * applying the {@link World} context.
+     *
+     * @param w the World object depicting the environment context.
+     * @param e the Entity to be processed
+     * @param d the elapsed tie since the previous call.
+     */
+    private void applyPhysics(World w, Entity e, double d) {
         // apply velocity computation
         if (e.getPhysicType().equals(PhysicType.DYNAMIC)) {
             // compute position according to velocity
@@ -1119,13 +1135,19 @@ public class KarmaApp extends JPanel implements KeyListener {
             e.updateBox();
             // apply physic computation on children (if any)
             e.getChild().stream().filter(Entity::isActive).forEach(c -> {
-                applyPhysics(c, world, d);
+                applyPhysics(world, c, d);
                 detectCollision(world, c, d);
             });
         }
 
     }
 
+    /**
+     * After physic processing, keep entity into the game area.
+     *
+     * @param w the World object depicting the environment context.
+     * @param e the Entity to be processed
+     */
     private void keepInPlayArea(World w, Entity e) {
         if (e.getPhysicType().equals(PhysicType.DYNAMIC)) {
             Rectangle2D playArea = w.getPlayArea();
@@ -1152,6 +1174,14 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
+    /**
+     * When all the physic and position are computed, detect possible collision,
+     * and request to compute the corresponding response.
+     *
+     * @param w the World object depicting the environment context.
+     * @param e the Entity to be processed
+     * @param d the elapsed tie since the previous call.
+     */
     private void detectCollision(World w, Entity e, double d) {
         Collection<Entity> entities = sceneManager.getCurrent().getEntities();
         // TODO: broad phase detect Entity at proximity cell through a Quadtree
@@ -1168,7 +1198,14 @@ public class KarmaApp extends JPanel implements KeyListener {
         });
     }
 
-    public synchronized void cullingProcess(KarmaApp game, float dt) {
+    /**
+     * Dispatch all the active entities into the Space partitioning system to reduce collision
+     * detections and optimize processing.
+     *
+     * @param game the parent game instance
+     * @param d    the elapsed time since previous call.
+     */
+    public synchronized void cullingProcess(KarmaApp game, double d) {
         spacePartition.clear();
         sceneManager.getCurrent().getEntities().stream()
                 .filter(Entity::isActive)
@@ -1177,6 +1214,13 @@ public class KarmaApp extends JPanel implements KeyListener {
                 });
     }
 
+    /**
+     * Process the collision response by creating the corresponding {@link CollisionEvent},
+     * and set the right {@link CollisionSide}.
+     *
+     * @param e the {@link Entity} source of collision
+     * @param o the {@link Entity}'s colliding with.
+     */
     private void handleCollision(Entity e, Entity o) {
         if (e.box.intersects(o.box)) {
             // Detect Collision Side
@@ -1207,6 +1251,11 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
+    /**
+     * Compute the collision response upon the {@link CollisionEvent}.
+     *
+     * @param ce the {@link CollisionEvent} to be processed.
+     */
     private void resolveCollision(CollisionEvent ce) {
         // Déterminer le vecteur normal de la collision
         Vector2D normal = calculateCollisionNormal(ce.getSrc(), ce.getDst());
@@ -1299,6 +1348,14 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
+    /**
+     * Fixing the source dynamic {@link Entity} position according to the destination static {@link Entity}.
+     *
+     * @param dynEntity  the {@link PhysicType#DYNAMIC} impacted {@link Entity}.
+     * @param statEntity the {@link PhysicType#STATIC} {@link Entity} to apply repositioning from.
+     * @param velocity   velocity of the Dynamic Entity
+     * @param normal     the resulting normal of the collision.
+     */
     private void applyPositionCorrection(Entity dynEntity,
                                          Entity statEntity,
                                          Vector2D velocity,
@@ -1331,6 +1388,15 @@ public class KarmaApp extends JPanel implements KeyListener {
         dynEntity.updateBox();
     }
 
+    /**
+     * Compute the penetration factor resulting from the collision between entity1 and entity2,
+     * with the resulting collision normal.
+     *
+     * @param entity1 the collision source {@link Entity}
+     * @param entity2 the collision destination {@link Entity}
+     * @param normal  the resulting normal for the collision between entity1 and entity2.
+     * @return the computed penetration vector along the collision normal.
+     */
     private double calculatePenetrationDepth(Entity entity1, Entity entity2, Vector2D normal) {
 
         // Calcul de la pénétration sur l'axe X
@@ -1357,6 +1423,9 @@ public class KarmaApp extends JPanel implements KeyListener {
         return normal.x != 0 ? penetrationDepthX : penetrationDepthY;
     }
 
+    /**
+     * Limit the resulting velocity on {@link Entity} the max value of {@link KarmaApp#MAX_VELOCITY}.
+     */
     private void limitVelocity(Entity entity) {
         Vector2D velocity = entity.getVelocity();
         if (velocity.magnitude() > MAX_VELOCITY) {
@@ -1364,12 +1433,23 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
+    /**
+     * Compute the collision Normal between entity1 and entity2.
+     *
+     * @param entity1 the collision source {@link Entity}
+     * @param entity2 the collision destination {@link Entity}
+     * @return the resulting collision normal.
+     */
     private Vector2D calculateCollisionNormal(Entity entity1, Entity entity2) {
         // Calculer un vecteur normal simplifié basé sur la position des entités
         Vector2D toEntity2 = entity2.getCenter().subtract(entity1.getCenter());
         return toEntity2.normalize();
     }
 
+    /**
+     * Drawing all the game graphics onto the screen buffer,
+     * and then copy this buffer to the window.
+     */
     public void draw() {
         // prepare rendering pipeline
         Graphics2D g = buffer.createGraphics();
@@ -1393,8 +1473,8 @@ public class KarmaApp extends JPanel implements KeyListener {
                                 -cam.position.getX(),
                                 -cam.position.getY());
                     }
-                    draw(e, g);
-                    e.getChild().forEach(c -> draw(c, g));
+                    draw(g, e);
+                    e.getChild().forEach(c -> draw(g, c));
                     if (Optional.ofNullable(cam).isPresent() && !e.isStatic()) {
                         g.translate(
                                 cam.position.getX(),
@@ -1431,7 +1511,7 @@ public class KarmaApp extends JPanel implements KeyListener {
                 null);
 
         if (isDebugGreaterThan(1)) {
-            displayDebugLineOnScreen(entities, gs);
+            displayDebugLineOnScreen(gs, entities);
         }
 
         // Switch buffer strategy
@@ -1440,7 +1520,13 @@ public class KarmaApp extends JPanel implements KeyListener {
         gs.dispose();
     }
 
-    private void displayDebugLineOnScreen(Collection<Entity> entities, Graphics2D gs) {
+    /**
+     * Display the debug information line onto the window bottom.
+     *
+     * @param gs       the {@link Graphics2D} API to use to draw onto the target window.
+     * @param entities the list fo entities to extract information from.
+     */
+    private void displayDebugLineOnScreen(Graphics2D gs, Collection<Entity> entities) {
         long countActiveEntities = entities.stream()
                 .filter(Entity::isActive).count();
         long countStaticEntities = entities.stream()
@@ -1464,16 +1550,22 @@ public class KarmaApp extends JPanel implements KeyListener {
                 16, winSize.height + 24);
     }
 
-    private void draw(Entity e, Graphics2D g) {
+    /**
+     * Draw an {@link Entity} according to its own nature and delegate rendering to specialized method.
+     *
+     * @param g the Graphics2D API instance to use.
+     * @param e the Entity to be drawn
+     */
+    private void draw(Graphics2D g, Entity e) {
         switch (e.getClass().getSimpleName()) {
             case "TextObject" -> {
-                drawTextObject((TextObject) e, g);
+                drawTextObject(g, (TextObject) e);
             }
             case "Entity" -> {
-                drawEntity(e, g);
+                drawEntity(g, e);
             }
             case "GridObject" -> {
-                drawGridObject((GridObject) e, g);
+                drawGridObject(g, (GridObject) e);
             }
         }
         if (!e.getBehaviors().isEmpty()) {
@@ -1514,7 +1606,13 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
-    private void drawGridObject(GridObject go, Graphics2D g) {
+    /**
+     * draw a GridObject instance onto screen buffer.
+     *
+     * @param g  the {@link Graphics2D} API instance to use
+     * @param go the {@link GridObject} to draw
+     */
+    private void drawGridObject(Graphics2D g, GridObject go) {
         // draw temporary background
         g.setColor(go.fc);
         g.setStroke(new BasicStroke(go.strokeSize));
@@ -1527,7 +1625,13 @@ public class KarmaApp extends JPanel implements KeyListener {
         g.setStroke(new BasicStroke(1.0f));
     }
 
-    private static void drawTextObject(TextObject to, Graphics2D g) {
+    /**
+     * Draw a TextObject instance onto screen buffer.
+     *
+     * @param g  the {@link Graphics2D} API instance to use
+     * @param to the {@link TextObject} to draw
+     */
+    private static void drawTextObject(Graphics2D g, TextObject to) {
         g.setFont(to.getFont());
         g.setColor(Color.BLACK);
         for (int dx = -1; dx < 2; dx++) {
@@ -1543,7 +1647,13 @@ public class KarmaApp extends JPanel implements KeyListener {
         to.updateBox(to.getPosition().x, to.getPosition().y - to.h, to.w, to.h);
     }
 
-    private static void drawEntity(Entity e, Graphics2D g) {
+    /**
+     * Draw a default Entity onto the screen buffer.
+     *
+     * @param g the {@link Graphics2D} API instance to use
+     * @param e the {@link Entity} to draw
+     */
+    private static void drawEntity(Graphics2D g, Entity e) {
         switch (e.type) {
             case RECTANGLE -> {
                 g.setColor(e.bg);
@@ -1560,23 +1670,47 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
+    /**
+     * Return true if level of debug is greater than the <code>dgt</code> value.
+     *
+     * @param dgt requested minimal level debug.
+     * @return true if level of debug is greater than the <code>dgt</code> value
+     */
     private static boolean isDebugGreaterThan(int dgt) {
         return debug > dgt;
     }
 
+    /**
+     * Freeing all the reserved resources.
+     */
     private void dispose() {
         info("End of karmaApp Wind");
+        if (Optional.ofNullable(sceneManager.getCurrent()).isPresent()) {
+            sceneManager.getCurrent().dispose(this);
+        }
         if (Optional.ofNullable(frame).isPresent()) {
             frame.dispose();
         }
     }
 
+    /**
+     * Log INFO level on console output.
+     *
+     * @param msg  the test message
+     * @param args the required arguments.
+     */
     public static void info(String msg, Object... args) {
 
         DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE_TIME;
         System.out.printf("%s|INFO|%s%n", dtf.format(LocalDateTime.now()), String.format(msg, args));
     }
 
+    /**
+     * Log DEBUG level on console output.
+     *
+     * @param msg  the test message
+     * @param args the required arguments.
+     */
     public static void debug(String msg, Object... args) {
         DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE_TIME;
         if (isDebugGreaterThan(1)) {
@@ -1584,10 +1718,18 @@ public class KarmaApp extends JPanel implements KeyListener {
         }
     }
 
+    /**
+     * Log ERROR level on console output.
+     *
+     * @param msg  the test message
+     * @param args the required arguments.
+     */
     public static void error(String msg, Object... args) {
         DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE_TIME;
         System.out.printf("%s|ERROR|%s%n", dtf.format(LocalDateTime.now()), String.format(msg, args));
     }
+
+    /*---- implementation fo the KeyListener interface ----*/
 
     @Override
     public void keyTyped(KeyEvent e) {
@@ -1628,13 +1770,14 @@ public class KarmaApp extends JPanel implements KeyListener {
         sceneManager.getCurrent().onKeyReleased(e);
     }
 
+
+    /**
+     * Retrieve the {@link Graphics2D} API instance for  the current screen buffer.
+     *
+     * @return the {@link Graphics2D} instance.
+     */
     public Graphics2D getGraphics() {
         return buffer.createGraphics();
-    }
-
-    public static void main(String[] argc) {
-        KarmaApp app = new KarmaApp();
-        app.run(argc);
     }
 
     /**
@@ -1756,5 +1899,41 @@ public class KarmaApp extends JPanel implements KeyListener {
         this.spacePartition = spacePartition;
     }
 
+
+    public Dimension getScreenSize() {
+        return resSize;
+    }
+
+    public World getWorld() {
+        return world;
+    }
+
+    public boolean isKeyPressed(int vkKeyCode) {
+        return keys[vkKeyCode];
+    }
+
+    public String getMessage(String keyMsg) {
+        return messages.getString(keyMsg);
+    }
+
+    public SceneManager getSceneManager() {
+        return sceneManager;
+    }
+
+    public Configuration getConfiguration() {
+        return config;
+    }
+
+
+    /**
+     * The main method for the {@link KarmaApp} instance to start the game
+     * with some possible command line arguments.
+     *
+     * @param argc the command line arguments array.
+     */
+    public static void main(String[] argc) {
+        KarmaApp app = new KarmaApp();
+        app.run(argc);
+    }
 
 }

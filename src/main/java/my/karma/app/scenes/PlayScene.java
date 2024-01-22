@@ -1,15 +1,13 @@
 package my.karma.app.scenes;
 
-import java.awt.geom.Rectangle2D;
-
 import my.karma.app.AbstractScene;
 import my.karma.app.KarmaApp;
 import my.karma.app.behaviors.PlayerInputBehavior;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.geom.Rectangle2D;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class PlayScene extends AbstractScene {
 
@@ -175,8 +173,8 @@ public class PlayScene extends AbstractScene {
             addEntity(
                     new KarmaApp.Entity("enemy_" + i)
                             .setPosition(
-                                    (int) 16 + (Math.random() * (getWorld().getPlayArea().getWidth() - 32)),
-                                    (int) 16 + (Math.random() * (getWorld().getPlayArea().getHeight()) - 32))
+                                    16 + (Math.random() * (getWorld().getPlayArea().getWidth() - 32)),
+                                    16 + (Math.random() * (getWorld().getPlayArea().getHeight()) - 32))
                             .setSize(8, 8)
                             .setPhysicType(KarmaApp.PhysicType.DYNAMIC)
                             .setBackgroundColor(Color.RED)
@@ -189,7 +187,7 @@ public class PlayScene extends AbstractScene {
                             .setMaterial(new KarmaApp.Material(1.0, 1.0, 0.99))
                             .setMass(5.0)
                             .setAttribute("energy", 20.0)
-                            .addBehavior(new KarmaApp.Behavior<KarmaApp.Entity>() {
+                            .addBehavior(new KarmaApp.Behavior<>() {
                                 @Override
                                 public void onCollision(KarmaApp.CollisionEvent ce) {
                                     // get src Entity energy
@@ -253,24 +251,15 @@ public class PlayScene extends AbstractScene {
                 if (ke.isControlDown()) {
                     getEntities().stream()
                             .filter(entity -> entity.isActive() && entity.name.startsWith("enemy_"))
-                            .forEach(entity -> {
-                                entity.setVelocity(
-                                        new KarmaApp.Vector2D(
-                                                Math.random() * 5.0,
-                                                Math.random() * 5.0));
-                            });
+                            .forEach(entity -> entity.setVelocity(
+                                    new KarmaApp.Vector2D(
+                                            Math.random() * 5.0,
+                                            Math.random() * 5.0)));
                 }
             }
-            case KeyEvent.VK_PAGE_UP -> {
-                generateEnemies(10);
-            }
-            case KeyEvent.VK_PAGE_DOWN -> {
-                removeEnemies(10);
-            }
-            case KeyEvent.VK_DELETE -> {
-                removeEnemies(0);
-            }
-
+            case KeyEvent.VK_PAGE_UP -> generateEnemies(10);
+            case KeyEvent.VK_PAGE_DOWN -> removeEnemies(10);
+            case KeyEvent.VK_DELETE -> removeEnemies(0);
         }
     }
 
