@@ -105,7 +105,7 @@ public void input() {
     sceneManager.getCurrent().input(this);
     // <2> process all input behaviors
     sceneManager.getCurrent().getEntities().stream()
-            .filter(KarmaApp.Entity::isActive)
+            .filter(KarmaPlatform.Entity::isActive)
             .forEach(e -> {
                 processInput(e);
             });

@@ -67,7 +67,7 @@ To be able to add a simple Entity to the scene, you need to create a new instanc
 entities list `<2>`:
 
 ```java
-public class KarmaApp extends JPanel implements KeyListener {
+public class KarmaPlatform extends JPanel implements KeyListener {
     //...
     private final Map<String, Entity> entities = new ConcurrentHashMap<>();
 

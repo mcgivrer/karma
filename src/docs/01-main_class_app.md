@@ -1,9 +1,9 @@
 # The main Application class
 
-The `KarmaApp` class is the main class for our game. It will manage the game loop, and also the display through a
+The `KarmaPlatform` class is the main class for our game. It will manage the game loop, and also the display through a
 windows and the buffered strategy to render this display.
 
-A `JFrame` component from the Swing java API is used to create a Window. The `KarmaApp` will inherit from a `JPanel`
+A `JFrame` component from the Swing java API is used to create a Window. The `KarmaPlatform` will inherit from a `JPanel`
 component to facilitate the window sizing accordingly to the defined size in the configuration properties file.
 
 To render the game objects, we will use a buffer strategy to first draw all game objects onto an image buffer, and then
@@ -15,7 +15,7 @@ copy this buffer to a 3-layer `JFrame` buffer. At rendering time, we first draw 
 hide methods
 hide attributes
 
-class KarmaApp extends JPanel implements KeyListener{
+class KarmaPlatform extends JPanel implements KeyListener{
   +createScene()
   +input()
   +update(d:long)
@@ -24,15 +24,15 @@ class KarmaApp extends JPanel implements KeyListener{
   -dispose()
   -loop()
 }
-show KarmaApp methods 
+show KarmaPlatform methods 
 
-KarmaApp --> BufferedImage:buffer
-KarmaApp -->  JFrame:frame
+KarmaPlatform --> BufferedImage:buffer
+KarmaPlatform -->  JFrame:frame
 
 @enduml
 ```
 
-_figure 1.1 - the KarmaApp main class_
+_figure 1.1 - the KarmaPlatform main class_
 
 The `init(String[])` method is loading a default configuration from a properties file (config.properties) and overload
 it with possible matching arguments from the java command line
@@ -57,16 +57,16 @@ The `update` method processing is the most complex, because this is where all th
 
 ```plantuml
 @startuml
-KarmaApp -> KarmaApp:loop()
-KarmaApp -> KarmaApp:input()
-KarmaApp -> KarmaApp:update()
+KarmaPlatform -> KarmaPlatform:loop()
+KarmaPlatform -> KarmaPlatform:input()
+KarmaPlatform -> KarmaPlatform:update()
 group "apply Physic"
-KarmaApp -> KarmaApp:applyPhysics()
-KarmaApp --> KarmaApp:keepInPlayArea()
-KarmaApp --> KarmaApp:detectCollision()
-KarmaApp --> Behavior:onUpdate()
+KarmaPlatform -> KarmaPlatform:applyPhysics()
+KarmaPlatform --> KarmaPlatform:keepInPlayArea()
+KarmaPlatform --> KarmaPlatform:detectCollision()
+KarmaPlatform --> Behavior:onUpdate()
 end
-KarmaApp -> KarmaApp:draw()
+KarmaPlatform -> KarmaPlatform:draw()
 @enduml
 ```
 

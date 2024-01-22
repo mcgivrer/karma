@@ -21,22 +21,22 @@ public interface Scene {
     String getTitle();
 
     // <2>
-    void create(KarmaApp app);
+    void create(KarmaPlatform app);
 
     // <3>
-    void initialize(KarmaApp app);
+    void initialize(KarmaPlatform app);
 
     // <4>
     void input();
 
     // <5>
-    void update(KarmaApp app, long d);
+    void update(KarmaPlatform app, long d);
 
     // <6>
-    void draw(KarmaApp app, Graphics2D g);
+    void draw(KarmaPlatform app, Graphics2D g);
 
     // <7>
-    void dispose(KarmaApp app);
+    void dispose(KarmaPlatform app);
 
     // <8>
     Collection<Entity> getEntities();
@@ -63,12 +63,12 @@ As we now have a Scene interface, we need a manager to create, activate, deactiv
 ```java
 public static class SceneManager {
     // <1>
-    private KarmaApp app;
+    private KarmaPlatform app;
     private Scene current;
     private Map<String, Scene> scenes = new HashMap<>();
 
     // <2>
-    public SceneManager(KarmaApp app) {
+    public SceneManager(KarmaPlatform app) {
         this.app = app;
     }
 
@@ -121,18 +121,18 @@ The `AbstractScene` is an abstract class implementing partially the `Scene` inte
 management operation for that `Scene`.
 
 ```java
-public abstract class AbstractScene implements KarmaApp.Scene {
+public abstract class AbstractScene implements KarmaPlatform.Scene {
     //<1>
-    private final Map<String, KarmaApp.Entity> entities = new ConcurrentHashMap<>();
-    private final KarmaApp.World world;
+    private final Map<String, KarmaPlatform.Entity> entities = new ConcurrentHashMap<>();
+    private final KarmaPlatform.World world;
 
     //<2>
-    public AbstractScene(KarmaApp app) {
+    public AbstractScene(KarmaPlatform app) {
         this.world = app.getWorld();
     }
 
     //<3>
-    protected void addEntity(KarmaApp.Entity e) {
+    protected void addEntity(KarmaPlatform.Entity e) {
         entities.put(e.name, e);
     }
 
@@ -140,16 +140,16 @@ public abstract class AbstractScene implements KarmaApp.Scene {
         entities.clear();
     }
 
-    public KarmaApp.Entity getEntity(String name) {
+    public KarmaPlatform.Entity getEntity(String name) {
         return entities.get(name);
     }
 
-    public Collection<KarmaApp.Entity> getEntities() {
+    public Collection<KarmaPlatform.Entity> getEntities() {
         return entities.values();
     }
 
     // <4>
-    public KarmaApp.World getWorld() {
+    public KarmaPlatform.World getWorld() {
         return this.world;
     }
 
@@ -161,12 +161,12 @@ public abstract class AbstractScene implements KarmaApp.Scene {
 3. everything about `Entity`, add, clear and getters,
 4. retrieve the `Scene`'s `World` instance.
 
-## Usage into KarmaApp
+## Usage into KarmaPlatform
 
 Now we defined some Scene interface, an Abstract layer to support Entity management, we can now implment SceneManager
-usage into the KarmaApp class.
+usage into the KarmaPlatform class.
 
-We can remove the entities and the world attributes from the `KarmaApp`.
+We can remove the entities and the world attributes from the `KarmaPlatform`.
 
 And now initialize the `SceneManager`:
 
@@ -190,7 +190,7 @@ private void loop() {
 }
 ```
 
-And on each of the 3 main loop operations in the `KarmaApp` class:
+And on each of the 3 main loop operations in the `KarmaPlatform` class:
 
 ```java
 public void input() {
@@ -232,7 +232,7 @@ We are going to modify a little the play by creating two scenes:
 - one to welcome the player a `TitleScene`
 - and a second one with the game itself, the `PlayScene`.
 
-As these scenes are specific to our demo, We will implement it outside the bif KarmaApp class, and in
+As these scenes are specific to our demo, We will implement it outside the bif KarmaPlatform class, and in
 a `my.karma.app.scenes` package.
 
 ### The title screen
@@ -250,7 +250,7 @@ and an input detection of any key press on <kbd>ENTER</kbd> or <kbd>SPACE</kbd> 
 ```java
 public class TitleScene extends AbstractScene {
     // <1>
-    public TitleScene(KarmaApp app) {
+    public TitleScene(KarmaPlatform app) {
         super(app);
     }
 
@@ -262,35 +262,35 @@ public class TitleScene extends AbstractScene {
 
     // <3>
     @Override
-    public void create(KarmaApp app) {
+    public void create(KarmaPlatform app) {
         Font fl = app.getGraphics().getFont().deriveFont(Font.BOLD, 18.0f);
         String titleMsg = app.getMessage("app.main.title");
         int titleWidth = app.getGraphics().getFontMetrics().stringWidth(titleMsg);
-        KarmaApp.TextObject titleTxt = (KarmaApp.TextObject) new KarmaApp.TextObject("title")
+        KarmaPlatform.TextObject titleTxt = (KarmaPlatform.TextObject) new KarmaPlatform.TextObject("title")
                 .setText(titleMsg)
                 .setFont(fl)
                 .setTextColor(Color.WHITE)
                 .setPosition((int) ((app.getScreenSize().width - titleWidth) * 0.46), (int) (app.getScreenSize().height * 0.25))
-                .setPhysicType(KarmaApp.PhysicType.NONE)
+                .setPhysicType(KarmaPlatform.PhysicType.NONE)
                 .setPriority(1);
         addEntity(titleTxt);
 
         Font flMsg = app.getGraphics().getFont().deriveFont(Font.BOLD, 12.0f);
         String startMsg = app.getMessage("app.main.start");
         int startWidth = app.getGraphics().getFontMetrics().stringWidth(startMsg);
-        KarmaApp.TextObject startTxt = (KarmaApp.TextObject) new KarmaApp.TextObject("startMessage")
+        KarmaPlatform.TextObject startTxt = (KarmaPlatform.TextObject) new KarmaPlatform.TextObject("startMessage")
                 .setText(startMsg)
                 .setFont(flMsg)
                 .setTextColor(Color.WHITE)
                 .setPosition((int) ((app.getScreenSize().width - startWidth) * 0.46), (int) (app.getScreenSize().height * 0.70))
-                .setPhysicType(KarmaApp.PhysicType.NONE)
+                .setPhysicType(KarmaPlatform.PhysicType.NONE)
                 .setPriority(1);
         addEntity(startTxt);
     }
 
     // <4>
     @Override
-    public void input(KarmaApp app) {
+    public void input(KarmaPlatform app) {
         if (app.isKeyPressed(KeyEvent.VK_ENTER) || app.isKeyPressed(KeyEvent.VK_SPACE)) {
             app.getSceneManager().activate("play");
         }
@@ -300,7 +300,7 @@ public class TitleScene extends AbstractScene {
 
 ### The game screen
 
-The PlayScene is mostly an extract of the previous KarmaApp implementation from the create and input method,
+The PlayScene is mostly an extract of the previous KarmaPlatform implementation from the create and input method,
 moving their content to the new `PlayScene` class:
 
 1. here are the required attributes for this scene, the _score_ and the _lives_ number,
@@ -322,7 +322,7 @@ public class PlayScene extends AbstractScene {
 }
 ```
 
-Then we need to copy/past the create method body from the KarmaApp:
+Then we need to copy/past the create method body from the KarmaPlatform:
 
 1. Create all the required Entity and objects
 2. Add a new GridObject to render the checker background only on this scene (TitleScene does not need it).
@@ -330,10 +330,10 @@ Then we need to copy/past the create method body from the KarmaApp:
 ```java
 
 @Override
-public void create(KarmaApp app) {
+public void create(KarmaPlatform app) {
     // <1>
     // Add a player.
-    KarmaApp.Entity p = new KarmaApp.Entity("player")
+    KarmaPlatform.Entity p = new KarmaPlatform.Entity("player")
             .setPosition(160, 100)
             .setSize(16, 16)
             .setFriction(0.995)
@@ -347,7 +347,7 @@ public void create(KarmaApp app) {
     //...
 
     // <2>
-    KarmaApp.GridObject go = (KarmaApp.GridObject) new KarmaApp.GridObject("grid")
+    KarmaPlatform.GridObject go = (KarmaPlatform.GridObject) new KarmaPlatform.GridObject("grid")
             .setPriority(-10)
             .setBorderColor(Color.DARK_GRAY);
     addEntity(go);
@@ -359,8 +359,8 @@ In the Input method, we must manage the key pressed events for player moves:
 ```java
 
 @Override
-public void input(KarmaApp app) {
-    KarmaApp.Entity p = getEntity("player");
+public void input(KarmaPlatform app) {
+    KarmaPlatform.Entity p = getEntity("player");
 
     double speedStep = p.getAttribute("speedStep");
 
@@ -393,9 +393,9 @@ And finally, we will update the score and lives display entities according to th
 ```java
 
 @Override
-public void update(KarmaApp app, long d) {
-    ((KarmaApp.TextObject) getEntity("lives")).setValue(lives);
-    ((KarmaApp.TextObject) getEntity("score")).setValue(score);
+public void update(KarmaPlatform app, long d) {
+    ((KarmaPlatform.TextObject) getEntity("lives")).setValue(lives);
+    ((KarmaPlatform.TextObject) getEntity("score")).setValue(score);
 }
 ```
 
