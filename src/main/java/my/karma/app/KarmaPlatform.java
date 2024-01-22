@@ -443,7 +443,6 @@ public class KarmaPlatform extends JPanel implements KeyListener {
          * update the bounding box and the center attributes.
          */
         public void updateBox() {
-            setSize(w, h);
             box.setFrame(position.x, position.y, w, h);
             center = position.add(new Vector2D((0.5 * w), (0.5 * h)));
         }
@@ -2132,7 +2131,35 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     }
 
     public String getMessage(String keyMsg) {
-        return messages.getString(keyMsg);
+        return replaceTemplate(messages.getString(keyMsg), messages);
+    }
+
+    public static String replaceTemplate(String template, ResourceBundle values) {
+        StringTokenizer tokenizer = new StringTokenizer(template, "${}", true);
+        StringJoiner joiner = new StringJoiner("");
+
+        while (tokenizer.hasMoreTokens()) {
+            String token = tokenizer.nextToken();
+
+            if (token.equals("$")) {
+                if (tokenizer.hasMoreTokens()) {
+                    token = tokenizer.nextToken();
+
+                    if (token.equals("{") && tokenizer.hasMoreTokens()) {
+                        String key = tokenizer.nextToken();
+
+                        if (tokenizer.hasMoreTokens() && tokenizer.nextToken().equals("}")) {
+                            String value = values.containsKey(key) ? values.getString(key) : "${" + key + "}";
+                            joiner.add(value);
+                        }
+                    }
+                }
+            } else {
+                joiner.add(token);
+            }
+        }
+
+        return joiner.toString();
     }
 
     public SceneManager getSceneManager() {
