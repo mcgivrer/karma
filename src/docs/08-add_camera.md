@@ -14,8 +14,9 @@ _figure 8.1 - What is a Camera in a game ?_
 Here are:
 
 - the play area at (0,0) with a size of 500 x 400,
-- a player GameObject at (p.x,p.y) with a size of 16x16,
-- the Camera object is targeting the player entity with a specific tween factor used to add some elasticity and delay in
+- a player `Entity` at (p.x,p.y) with a size of 16x16,
+- the `Camera` object is targeting the player entity with a specific tween factor used to add some elasticity and delay
+  in
   the tracking operation.
 
 ## Implementation proposal
@@ -76,3 +77,7 @@ public static class Camera extends Entity {
     }
 }
 ```
+
+## Usage
+
+TODO

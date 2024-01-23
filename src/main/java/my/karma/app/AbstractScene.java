@@ -1,26 +1,24 @@
 package my.karma.app;
 
-import java.awt.*;
-import java.awt.event.KeyEvent;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public abstract class AbstractScene implements KarmaApp.Scene {
+public abstract class AbstractScene implements KarmaPlatform.Scene {
 
-    private final Map<String, KarmaApp.Entity> entities = new ConcurrentHashMap<>();
-    private final KarmaApp.World world;
-    private KarmaApp.Camera camera;
+    private final Map<String, KarmaPlatform.Entity> entities = new ConcurrentHashMap<>();
+    private final KarmaPlatform.World world;
+    private KarmaPlatform.Camera camera;
 
-    public AbstractScene(KarmaApp app) {
+    public AbstractScene(KarmaPlatform app) {
         this.world = app.getWorld();
     }
 
-    public void addEntity(KarmaApp.Entity e) {
+    public void addEntity(KarmaPlatform.Entity e) {
         entities.put(e.name, e);
     }
 
-    public KarmaApp.World getWorld() {
+    public KarmaPlatform.World getWorld() {
         return this.world;
     }
 
@@ -28,19 +26,19 @@ public abstract class AbstractScene implements KarmaApp.Scene {
         entities.clear();
     }
 
-    public KarmaApp.Entity getEntity(String name) {
+    public KarmaPlatform.Entity getEntity(String name) {
         return entities.get(name);
     }
 
-    public Collection<KarmaApp.Entity> getEntities() {
+    public Collection<KarmaPlatform.Entity> getEntities() {
         return entities.values();
     }
 
-    public KarmaApp.Camera getCamera() {
+    public KarmaPlatform.Camera getCamera() {
         return this.camera;
     }
 
-    public KarmaApp.Scene setCamera(KarmaApp.Camera c) {
+    public KarmaPlatform.Scene setCamera(KarmaPlatform.Camera c) {
         this.camera = c;
         return this;
     }
