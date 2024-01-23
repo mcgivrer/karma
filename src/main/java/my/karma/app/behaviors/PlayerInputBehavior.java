@@ -11,17 +11,18 @@ public class PlayerInputBehavior implements KarmaPlatform.Behavior<KarmaPlatform
         double speedStep = p.getAttribute("speedStep");
 
         if (app.isKeyPressed(KeyEvent.VK_UP)) {
-            p.velocity.y = -speedStep;
+            p.addForce(new KarmaPlatform.Vector2D(0, -speedStep));
         }
         if (app.isKeyPressed(KeyEvent.VK_DOWN)) {
-            p.velocity.y = speedStep;
+            p.addForce(new KarmaPlatform.Vector2D(0, speedStep));
 
         }
         if (app.isKeyPressed(KeyEvent.VK_LEFT)) {
-            p.velocity.x = -speedStep;
+            p.addForce(new KarmaPlatform.Vector2D(-speedStep, 0));
+
         }
         if (app.isKeyPressed(KeyEvent.VK_RIGHT)) {
-            p.velocity.x = speedStep;
+            p.addForce(new KarmaPlatform.Vector2D(speedStep, 0));
         }
     }
 }

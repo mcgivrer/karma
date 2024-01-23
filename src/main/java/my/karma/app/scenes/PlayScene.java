@@ -6,6 +6,7 @@ import my.karma.app.behaviors.PlayerInputBehavior;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,7 @@ public class PlayScene extends AbstractScene {
                 new KarmaPlatform.Disturbance("wind")
                         .setPosition(0, 0)
                         .setSize(w.getPlayArea().getWidth(), w.getPlayArea().getHeight() * 0.8)
+                        .addForce(new KarmaPlatform.Vector2D(0.002, 0.0))
         );
         createPlatforms(app);
 
@@ -50,7 +52,7 @@ public class PlayScene extends AbstractScene {
                 .setForegroundColor(new Color(0.0f, 0.0f, 0.6f, 1.0f))
                 .setBackgroundColor(Color.BLUE)
                 .setPriority(1)
-                .setAttribute("speedStep", 0.15)
+                .setAttribute("speedStep", 0.0045)
                 .setAttribute("energy", 100.0)
                 .setAttribute("mana", 100.0)
                 .setAttribute("hit", 1.0)
@@ -237,6 +239,28 @@ public class PlayScene extends AbstractScene {
                                         ce.getSrc().setAttribute("energy", energy);
                                     }
                                 }
+                            }).addBehavior(new KarmaPlatform.Behavior<KarmaPlatform.Entity>() {
+                                @Override
+                                public void onUpdate(KarmaPlatform a, KarmaPlatform.Entity e, double d) {
+                                    KarmaPlatform.Entity player = getEntity("player");
+                                    if (player.getCenter().getDistance(e.getCenter()) < 50.0) {
+                                        KarmaPlatform.Vector2D v = player.getVelocity().subtract(e.getPosition());
+                                        e.setVelocity(v.multiply(-0.0001));
+                                    }
+                                }
+
+                                @Override
+                                public void onDraw(KarmaPlatform a, Graphics2D g, KarmaPlatform.Entity e) {
+                                    if (KarmaPlatform.isDebugGreaterThan(3)) {
+                                        g.setColor(Color.YELLOW);
+                                        g.setStroke(new BasicStroke(0.05f));
+                                        g.draw(
+                                                new Ellipse2D.Double(
+                                                        (int) e.getCenter().x - e.w, (int) e.getCenter().y - e.h,
+                                                        (int) 50.0, (int) 50.0));
+                                    }
+
+                                }
                             }));
         }
     }
@@ -248,7 +272,7 @@ public class PlayScene extends AbstractScene {
     }
 
     @Override
-    public void update(KarmaPlatform app, long d) {
+    public void update(KarmaPlatform app, double d) {
         ((KarmaPlatform.TextObject) getEntity("lives")).setValue(lives);
         ((KarmaPlatform.TextObject) getEntity("score")).setValue(score);
     }
