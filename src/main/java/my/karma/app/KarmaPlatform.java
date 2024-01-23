@@ -447,7 +447,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             center = position.add(new Vector2D((0.5 * w), (0.5 * h)));
         }
 
-        public Entity setBorderColor(Color frontColor) {
+        public Entity setForegroundColor(Color frontColor) {
             this.fgColor = frontColor;
             return this;
         }
@@ -508,6 +508,10 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
         public <T> T getAttribute(String attrName) {
             return (T) attributes.get(attrName);
+        }
+
+        public <T> T getAttributeOrDefault(String attrName, T defaultValue) {
+            return (T) attributes.getOrDefault(attrName, defaultValue);
         }
 
         public Entity setType(EntityType entityType) {
@@ -1026,8 +1030,9 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
     public static class World {
 
-        Rectangle2D playArea;
-        double gravity;
+        private Rectangle2D playArea;
+        private double gravity;
+        private final List<Disturbance> disturbances = new ArrayList<>();
 
         public World() {
             gravity = 0.981;
@@ -1051,19 +1056,32 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         public Rectangle2D getPlayArea() {
             return playArea;
         }
+
+        public World addPerturbation(Disturbance p) {
+            disturbances.add(p);
+            return this;
+        }
+
+        public List<Disturbance> getDisturbances() {
+            return disturbances;
+        }
     }
 
-    public class Perturbation extends Entity{
+    public static class Disturbance extends Entity {
 
         /**
-         * Create a new {@link Perturbation} with a name.
+         * Create a new {@link Disturbance} with a name.
          * The internal {@link Entity#id} for this {@link Entity} will be created based on the
          * internal {@link Entity#index} counter.
          *
          * @param name the name for this new Entity.
          */
-        public Perturbation(String name) {
+        public Disturbance(String name) {
             super(name);
+            this.setPhysicType(PhysicType.NONE);
+            this.setType(EntityType.RECTANGLE);
+            setForegroundColor(null);
+            setBackgroundColor(null);
         }
     }
 
@@ -1310,6 +1328,9 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                 .filter(Entity::isActive)
                 .forEach(e -> {
                     if (!e.getPhysicType().equals(PhysicType.NONE)) {
+
+                        // if concerned, apply World disturbances.
+                        applyWorldDisturbance(world, e, d);
                         // compute physic on the Entity (velocity & position)
                         applyPhysics(world, e, d);
                         // detect collision and apply response
@@ -1331,37 +1352,46 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      * Apply the physic mechanics from the physic engine on the specified {@link Entity} instance,
      * applying the {@link World} context.
      *
-     * @param w the World object depicting the environment context.
-     * @param e the Entity to be processed
-     * @param d the elapsed tie since the previous call.
+     * @param world  the World object depicting the environment context.
+     * @param entity the Entity to be processed
+     * @param d      the elapsed tie since the previous call.
      */
-    private void applyPhysics(World w, Entity e, double d) {
+    private void applyPhysics(World world, Entity entity, double d) {
         // apply velocity computation
-        if (e.getPhysicType().equals(PhysicType.DYNAMIC)) {
+        if (entity.getPhysicType().equals(PhysicType.DYNAMIC)) {
             // compute position according to velocity
-            e.position = e.position.add(e.getVelocity().multiply(d))
-                    .add(new Vector2D(0, (w.getGravity() * 0.1)).multiply(d));
-            e.updateBox();
+            entity.position = entity.position.add(entity.getVelocity().multiply(d))
+                    .add(new Vector2D(0, (world.getGravity() * 0.1)).multiply(d));
+            entity.updateBox();
             // apply friction
-            e.setVelocity(e.getVelocity().multiply(e.getMaterial().friction));
+            entity.setVelocity(entity.getVelocity().multiply(entity.getMaterial().friction));
             // apply possible behavior#update
-            if (!e.getBehaviors().isEmpty()) {
-                e.getBehaviors().forEach(b -> {
-                    b.onUpdate(this, e, d);
-                    e.updateBox();
+            if (!entity.getBehaviors().isEmpty()) {
+                entity.getBehaviors().forEach(b -> {
+                    b.onUpdate(this, entity, d);
+                    entity.updateBox();
                 });
             }
             // keep entity in the KarmaApp area
-            keepInPlayArea(w, e);
+            keepInPlayArea(world, entity);
             // update the box for the entity.
-            e.updateBox();
+            entity.updateBox();
             // apply physic computation on children (if any)
-            e.getChild().stream().filter(Entity::isActive).forEach(c -> {
+            entity.getChild().stream().filter(Entity::isActive).forEach(c -> {
                 applyPhysics(world, c, d);
                 detectCollision(world, c, d);
             });
         }
 
+    }
+
+    private void applyWorldDisturbance(World world, Entity entity, double d) {
+        for (Disturbance dist : world.disturbances) {
+            if (dist.box.intersects(entity.box) || dist.box.contains(entity.box)) {
+                // TODO add forces and acceleration to Entity.
+                //entity.addAllForces(dist.getForces());
+            }
+        }
     }
 
     /**
@@ -1884,8 +1914,10 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                     g.setColor(e.getBackgroundColor());
                     g.fillRect((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
                 }
-                g.setColor(e.getForegroundColor());
-                g.drawRect((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
+                if (Optional.of(e.getForegroundColor()).isPresent()) {
+                    g.setColor(e.getForegroundColor());
+                    g.drawRect((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
+                }
             }
             case ELLIPSE -> {
                 if (Optional.of(e.getBackgroundColor()).isPresent()) {

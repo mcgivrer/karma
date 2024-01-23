@@ -7,6 +7,7 @@ import my.karma.app.behaviors.PlayerInputBehavior;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.geom.Rectangle2D;
+import java.util.ArrayList;
 import java.util.List;
 
 public class PlayScene extends AbstractScene {
@@ -25,7 +26,12 @@ public class PlayScene extends AbstractScene {
 
     @Override
     public void create(KarmaPlatform app) {
-
+        KarmaPlatform.World w = getWorld();
+        w.addPerturbation((KarmaPlatform.Disturbance)
+                new KarmaPlatform.Disturbance("wind")
+                        .setPosition(0, 0)
+                        .setSize(w.getPlayArea().getWidth(), w.getPlayArea().getHeight() * 0.8)
+        );
         createPlatforms(app);
 
         // Add camera
@@ -41,7 +47,7 @@ public class PlayScene extends AbstractScene {
                 .setSize(16, 16)
                 .setMaterial(playerMat)
                 .setMass(20.0)
-                .setBorderColor(new Color(0.0f, 0.0f, 0.6f, 1.0f))
+                .setForegroundColor(new Color(0.0f, 0.0f, 0.6f, 1.0f))
                 .setBackgroundColor(Color.BLUE)
                 .setPriority(1)
                 .setAttribute("speedStep", 0.15)
@@ -53,7 +59,7 @@ public class PlayScene extends AbstractScene {
         cam.setTarget(p);
 
         // Add some enemies.
-        generateEnemies(20);
+        generateNRJBalls(20);
 
         // Create HUD
         createHUD(app);
@@ -61,17 +67,6 @@ public class PlayScene extends AbstractScene {
 
     private void createPlatforms(KarmaPlatform app) {
         KarmaPlatform.Material platformMat = new KarmaPlatform.Material("PLATFORM_MAT", 1.0, 1.0, 0.1);
-        KarmaPlatform.Entity platform1 = new KarmaPlatform.Entity("platform_01")
-                .setPosition(100, 100)
-                .setSize(100, 32)
-                .setPhysicType(KarmaPlatform.PhysicType.STATIC)
-                .setType(KarmaPlatform.EntityType.RECTANGLE)
-                .setMass(4.0)
-                .setBorderColor(Color.GRAY)
-                .setBackgroundColor(Color.DARK_GRAY)
-                .setPriority(10)
-                .setMaterial(platformMat);
-        addEntity(platform1);
 
         KarmaPlatform.Entity platform2 = new KarmaPlatform.Entity("platform_border_top")
                 .setPosition(0, 0)
@@ -79,7 +74,7 @@ public class PlayScene extends AbstractScene {
                 .setPhysicType(KarmaPlatform.PhysicType.STATIC)
                 .setType(KarmaPlatform.EntityType.RECTANGLE)
                 .setMass(4.0)
-                .setBorderColor(Color.GRAY)
+                .setForegroundColor(Color.GRAY)
                 .setBackgroundColor(Color.DARK_GRAY)
                 .setPriority(10)
                 .setMaterial(platformMat);
@@ -91,7 +86,7 @@ public class PlayScene extends AbstractScene {
                 .setPhysicType(KarmaPlatform.PhysicType.STATIC)
                 .setType(KarmaPlatform.EntityType.RECTANGLE)
                 .setMass(4.0)
-                .setBorderColor(Color.GRAY)
+                .setForegroundColor(Color.GRAY)
                 .setBackgroundColor(Color.DARK_GRAY)
                 .setPriority(10)
                 .setMaterial(platformMat);
@@ -99,11 +94,11 @@ public class PlayScene extends AbstractScene {
 
         KarmaPlatform.Entity platform4 = new KarmaPlatform.Entity("platform_border_left")
                 .setPosition(0, 16)
-                .setSize(16, (int) getWorld().getPlayArea().getHeight())
+                .setSize(16, (int) getWorld().getPlayArea().getHeight() - 16)
                 .setPhysicType(KarmaPlatform.PhysicType.STATIC)
                 .setType(KarmaPlatform.EntityType.RECTANGLE)
                 .setMass(4.0)
-                .setBorderColor(Color.GRAY)
+                .setForegroundColor(Color.GRAY)
                 .setBackgroundColor(Color.DARK_GRAY)
                 .setPriority(10)
                 .setMaterial(platformMat);
@@ -115,12 +110,44 @@ public class PlayScene extends AbstractScene {
                 .setPhysicType(KarmaPlatform.PhysicType.STATIC)
                 .setType(KarmaPlatform.EntityType.RECTANGLE)
                 .setMass(4.0)
-                .setBorderColor(Color.GRAY)
+                .setForegroundColor(Color.GRAY)
                 .setBackgroundColor(Color.DARK_GRAY)
                 .setPriority(10)
                 .setMaterial(platformMat);
         addEntity(platform5);
 
+        List<KarmaPlatform.Entity> platforms = new ArrayList<>();
+
+        for (int j = 0; j < 20; j++) {
+            double maxX = getWorld().getPlayArea().getWidth() / 16.0;
+            double maxY = getWorld().getPlayArea().getHeight() / 32.0;
+
+            double pw = (2 + Math.random() * 4);
+            double px = (2 + (Math.random() * (maxX - (4 + pw)))) * 16;
+            double py = (1 + (Math.random() * (maxY - 2))) * 32;
+
+            KarmaPlatform.Entity platform = new KarmaPlatform.Entity("platform_" + j)
+                    .setPosition(px, py)
+                    .setSize(pw * 16.0, 16.0)
+                    .setPhysicType(KarmaPlatform.PhysicType.STATIC)
+                    .setType(KarmaPlatform.EntityType.RECTANGLE)
+                    .setMass(4.0)
+                    .setForegroundColor(new Color(0.1f, 0.3f, 0.1f))
+                    .setBackgroundColor(new Color(0.2f, 0.6f, 0.2f))
+                    .setPriority(10)
+                    .setMaterial(platformMat);
+            if (isNotIntersectingWith(platforms, platform)) {
+                platforms.add(platform);
+                addEntity(platform);
+            }
+        }
+    }
+
+    private boolean isNotIntersectingWith(List<KarmaPlatform.Entity> platforms, KarmaPlatform.Entity platform) {
+        List<KarmaPlatform.Entity> collidingWith = platforms.stream()
+                .filter(p -> p.box.intersects(platform.box))
+                .toList();
+        return collidingWith.isEmpty();
     }
 
     private void createHUD(KarmaPlatform app) {
@@ -165,28 +192,28 @@ public class PlayScene extends AbstractScene {
         KarmaPlatform.GridObject go = (KarmaPlatform.GridObject) new KarmaPlatform.GridObject("grid")
                 .setStrokeSize(0.5f)
                 .setPriority(-10)
-                .setBorderColor(new Color(0.5f, 0.5f, 0.5f, 0.5f));
+                .setForegroundColor(new Color(0.5f, 0.5f, 0.5f, 0.5f));
         addEntity(go);
     }
 
-    private void generateEnemies(int nbEnemies) {
-        KarmaPlatform.Material enemyMat = new KarmaPlatform.Material("ENAMY_MAT", 1.0, 1.0, 0.99);
-        for (int i = 0; i < nbEnemies; i++) {
+    private void generateNRJBalls(int nbBalls) {
+        KarmaPlatform.Material ballMat = new KarmaPlatform.Material("BALL_MAT", 1.0, 1.0, 0.99);
+        for (int i = 0; i < nbBalls; i++) {
             addEntity(
-                    new KarmaPlatform.Entity("enemy_" + i)
+                    new KarmaPlatform.Entity("ball_" + i)
                             .setPosition(
-                                    16 + (Math.random() * (getWorld().getPlayArea().getWidth() - 32)),
-                                    16 + (Math.random() * (getWorld().getPlayArea().getHeight()) - 32))
+                                    32 + (Math.random() * (getWorld().getPlayArea().getWidth() - 64)),
+                                    32 + (Math.random() * (getWorld().getPlayArea().getHeight() - 64)))
                             .setSize(8, 8)
                             .setPhysicType(KarmaPlatform.PhysicType.DYNAMIC)
-                            .setBackgroundColor(Color.RED)
+                            .setBackgroundColor(new Color(0.9f, 0.8f, 0.1f))
+                            .setForegroundColor(new Color(0.7f, 0.6f, 0.2f))
                             .setType(KarmaPlatform.EntityType.ELLIPSE)
-                            .setBorderColor(new Color(0.8f, 0.0f, 0.0f, 1.0f))
                             .setPriority(-i)
                             .setVelocity(
                                     (0.5 - Math.random()) * 0.25,
                                     (0.5 - Math.random()) * 0.25)
-                            .setMaterial(enemyMat)
+                            .setMaterial(ballMat)
                             .setMass(5.0)
                             .setAttribute("energy", 20.0)
                             .addBehavior(new KarmaPlatform.Behavior<>() {
@@ -196,11 +223,11 @@ public class PlayScene extends AbstractScene {
                                     if (ce.getSrc().getAttribute("energy") != null && ce.getDst().name.startsWith("player")) {
                                         double energy = ce.getSrc().getAttribute("energy");
                                         // retrieve hit power from dst Entity if exists, else set 1
-                                        double hit = ce.getDst().getAttribute("hit") != null ? ce.getDst().getAttribute("hit") : 0.1;
+                                        double hit = ce.getDst().getAttributeOrDefault("hit", 0.1);
                                         // compute new energy for src Entity.
                                         energy -= hit;
                                         if (energy < 10) {
-                                            ce.getSrc().setBorderColor(Color.RED);
+                                            ce.getSrc().setForegroundColor(Color.RED);
                                             ce.getSrc().setBackgroundColor(Color.ORANGE);
                                         }
                                         if (energy <= 0) {
@@ -259,7 +286,7 @@ public class PlayScene extends AbstractScene {
                                             Math.random() * 5.0)));
                 }
             }
-            case KeyEvent.VK_PAGE_UP -> generateEnemies(10);
+            case KeyEvent.VK_PAGE_UP -> generateNRJBalls(10);
             case KeyEvent.VK_PAGE_DOWN -> removeEnemies(10);
             case KeyEvent.VK_DELETE -> removeEnemies(0);
         }

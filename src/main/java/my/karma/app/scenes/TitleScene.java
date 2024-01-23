@@ -25,7 +25,7 @@ public class TitleScene extends AbstractScene {
                 .setText(titleMsg)
                 .setFont(fl)
                 .setTextColor(Color.WHITE)
-                .setPosition((int) ((app.getScreenSize().width - titleWidth) * 0.46), (int) (app.getScreenSize().height * 0.25))
+                .setPosition((int) ((app.getScreenSize().width - titleWidth) * 0.34), (int) (app.getScreenSize().height * 0.25))
                 .setPhysicType(KarmaPlatform.PhysicType.NONE)
                 .setPriority(1);
         addEntity(titleTxt);
