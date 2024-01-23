@@ -1767,7 +1767,11 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         Camera cam = sceneManager.getCurrent().getCamera();
 
         // Draw things
-        Collection<Entity> entities = scene.getEntities();
+        List<Entity> entities = new ArrayList<>();
+        entities.addAll(scene.getEntities());
+        if (!getWorld().getDisturbances().isEmpty()) {
+            entities.addAll(getWorld().getDisturbances());
+        }
         entities.stream()
                 .filter(Entity::isActive)
                 .sorted(Comparator.comparingInt(Entity::getPriority))
@@ -1871,6 +1875,9 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             case "GridObject" -> {
                 drawGridObject(g, (GridObject) e);
             }
+            case "Disturbance" -> {
+                drawDebugDisturbance(g, (Disturbance) e);
+            }
         }
         if (!e.getBehaviors().isEmpty()) {
             e.getBehaviors().forEach(b -> {
@@ -1907,6 +1914,13 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                 });
             }
             g.setStroke(new BasicStroke(1.0f));
+        }
+    }
+
+    private void drawDebugDisturbance(Graphics2D g, Disturbance e) {
+        if (isDebugGreaterThan(3)) {
+            g.setColor(new Color(0.0f, 0.0f, 0.6f, 0.6f));
+            g.fillRect((int) e.getPosition().getX(), (int) e.getPosition().getY(), (int) e.w, (int) e.h);
         }
     }
 
