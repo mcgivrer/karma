@@ -1053,6 +1053,20 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         }
     }
 
+    public class Perturbation extends Entity{
+
+        /**
+         * Create a new {@link Perturbation} with a name.
+         * The internal {@link Entity#id} for this {@link Entity} will be created based on the
+         * internal {@link Entity#index} counter.
+         *
+         * @param name the name for this new Entity.
+         */
+        public Perturbation(String name) {
+            super(name);
+        }
+    }
+
     public interface Behavior<Entity> {
         default void onUpdate(KarmaPlatform a, Entity e, double d) {
         }
