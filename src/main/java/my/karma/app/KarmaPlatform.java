@@ -1876,7 +1876,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                 drawGridObject(g, (GridObject) e);
             }
             case "Disturbance" -> {
-                drawDebugDisturbance(g, (Disturbance) e);
+                drawDisturbance(g, (Disturbance) e);
             }
         }
         if (!e.getBehaviors().isEmpty()) {
@@ -1886,40 +1886,54 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         }
         // drawing some debug information.
         if (isDebugGreaterThan(1)) {
-            g.setColor(Color.ORANGE);
-            g.setFont(g.getFont().deriveFont(9.0f));
-            g.drawString("#" + e.id + "=" + e.name, (int) e.getPosition().getX() - 2, (int) e.getPosition().getY() - 2);
-            g.setStroke(new BasicStroke(0.5f));
-            if (isDebugGreaterThan(2)) {
-                g.draw(e.box);
-            }
-            // draw Velocity
-            g.setColor(Color.CYAN);
-            Vector2D pos1 = e.getPosition().add(e.getVelocity().multiply(100.0).add(new Vector2D(e.w, e.h).multiply(0.5)));
-            g.drawLine(
-                    (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
-                    (int) pos1.getX(), (int) pos1.getY());
-            if (isDebugGreaterThan(3)) {
-                // draw collision normals
-                g.setColor(Color.WHITE);
-                e.getCollisions().forEach(ce -> {
-                    Vector2D pos2 = ce.getSrc().getPosition()
-                            .add(ce.getNormal()
-                                    .multiply(10.0)
-                                    .add(new Vector2D(e.w, e.h)
-                                            .multiply(0.5)));
-                    g.drawLine(
-                            (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
-                            (int) pos2.getX(), (int) pos2.getY());
-                });
-            }
-            g.setStroke(new BasicStroke(1.0f));
+            drawDebugEntity(g, e);
         }
     }
 
-    private void drawDebugDisturbance(Graphics2D g, Disturbance e) {
+    private static void drawDebugEntity(Graphics2D g, Entity e) {
+        g.setColor(Color.ORANGE);
+        g.setFont(g.getFont().deriveFont(9.0f));
+        g.drawString("#" + e.id + "=" + e.name, (int) e.getPosition().getX() - 2, (int) e.getPosition().getY() - 2);
+        g.setStroke(new BasicStroke(0.5f));
+        if (isDebugGreaterThan(2)) {
+            g.draw(e.box);
+        }
+        // draw Velocity
+        g.setColor(Color.CYAN);
+        Vector2D pos1 = e.getPosition().add(e.getVelocity().multiply(100.0).add(new Vector2D(e.w, e.h).multiply(0.5)));
+        g.drawLine(
+                (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
+                (int) pos1.getX(), (int) pos1.getY());
         if (isDebugGreaterThan(3)) {
-            g.setColor(new Color(0.0f, 0.0f, 0.6f, 0.6f));
+            // draw collision normals
+            g.setColor(Color.WHITE);
+            e.getCollisions().forEach(ce -> {
+                Vector2D pos2 = ce.getSrc().getPosition()
+                        .add(ce.getNormal()
+                                .multiply(10.0)
+                                .add(new Vector2D(e.w, e.h)
+                                        .multiply(0.5)));
+                g.drawLine(
+                        (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
+                        (int) pos2.getX(), (int) pos2.getY());
+            });
+        }
+        g.setStroke(new BasicStroke(1.0f));
+    }
+
+    /**
+     * Draw debug information for a Disturbance object on screen as soon debug level greater than 3
+     *
+     * @param g the {@link Graphics2D} API instance to use
+     * @param e the Disturbance entity to be drawn.
+     */
+    private void drawDisturbance(Graphics2D g, Disturbance e) {
+        if (isDebugGreaterThan(3)) {
+            if (Optional.ofNullable(e.getBackgroundColor()).isPresent()) {
+                g.setColor(e.getBackgroundColor());
+            } else {
+                g.setColor(new Color(0.0f, 0.0f, 0.6f, 0.6f));
+            }
             g.fillRect((int) e.getPosition().getX(), (int) e.getPosition().getY(), (int) e.w, (int) e.h);
         }
     }
