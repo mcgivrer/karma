@@ -1,6 +1,5 @@
 package my.karma.app.scenes;
 
-import my.karma.app.AbstractScene;
 import my.karma.app.KarmaPlatform;
 import my.karma.app.behaviors.PlayerInputBehavior;
 
@@ -11,7 +10,7 @@ import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PlayScene extends AbstractScene {
+public class PlayScene extends KarmaPlatform.AbstractScene {
 
     private int lives = 5;
     private int score = 0;
