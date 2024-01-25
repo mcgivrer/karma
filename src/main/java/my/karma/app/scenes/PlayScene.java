@@ -27,7 +27,7 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
     @Override
     public void create(KarmaPlatform app) {
         KarmaPlatform.World w = getWorld();
-        w.addPerturbation((KarmaPlatform.Disturbance)
+        w.addDisturbance((KarmaPlatform.Disturbance)
                 new KarmaPlatform.Disturbance("wind")
                         .setPosition(0, 0)
                         .setSize(w.getPlayArea().getWidth(), w.getPlayArea().getHeight() * 0.8)

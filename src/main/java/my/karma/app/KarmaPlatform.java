@@ -31,8 +31,8 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     private static final double MAX_VELOCITY = 32.0;
     private final ResourceBundle messages = ResourceBundle.getBundle("i18n.messages");
 
-    private final int maxEntitiesInSpace = 2;
-    private final int maxLevelsInSpace = 4;
+    private int maxEntitiesInSpace = 5;
+    private int maxLevelsInSpace = 5;
     private boolean exit = false;
 
     private static int debug;
@@ -216,7 +216,8 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                                                 Integer.parseInt(res[0]), Integer.parseInt(res[1])));
                     }
                     case "app.physic.world.gravity" -> {
-                        app.world.setGravity(Double.parseDouble(arg[1]));
+                        String[] vals = arg[1].substring("(".length(), arg[1].length() - ")".length()).split(",");
+                        app.world.setGravity(new Vector2D(Double.parseDouble(vals[0]), Double.parseDouble(vals[1])));
                     }
                     case "app.physic.velocity.max" -> {
                         String[] vals = arg[1].substring("(".length(), arg[1].length() - ")".length()).split(",");
@@ -225,6 +226,12 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                     case "app.physic.acceleration.max" -> {
                         String[] vals = arg[1].substring("(".length(), arg[1].length() - ")".length()).split(",");
                         app.physicAccelerationMax = new Vector2D(Double.parseDouble(vals[0]), Double.parseDouble(vals[1]));
+                    }
+                    case "app.physic.partitioning.max.level" -> {
+                        app.maxLevelsInSpace = Integer.parseInt(arg[1]);
+                    }
+                    case "app.physic.partitioning.max.node.per.level" -> {
+                        app.maxEntitiesInSpace = Integer.parseInt(arg[1]);
                     }
                     case "app.scenes.list" -> {
                         app.sceneManager = new SceneManager(app);
@@ -374,7 +381,9 @@ public class KarmaPlatform extends JPanel implements KeyListener {
          * @return this updated Entity (thanks to fluent API).
          */
         public Entity register(CollisionEvent ce) {
-            collisions.add(ce);
+            if (!collisions.contains(ce)) {
+                collisions.add(ce);
+            }
             return this;
         }
 
@@ -686,7 +695,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     }
 
     public static class SpacePartition extends Rectangle2D.Double {
-        private int maxObjectsPerNode = 10;
+        private int maxObjectsPerNode = 5;
         private int maxTreeLevels = 5;
 
         private SpacePartition root;
@@ -1024,6 +1033,17 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         }
     }
 
+    /**
+     * The Default {@link Scene} interaction implementation to provide :
+     * <ul>
+     *     <li>a list {@link Entity} for the scene,</li>
+     *     <li>a default {@link Camera}</li>
+     *     <li>and {@link World} object</li>
+     * </ul>
+     *  to let the physical computation start.
+     *
+     * @author Frédéric Delorme
+     */
     public static abstract class AbstractScene implements KarmaPlatform.Scene {
 
         private final Map<String, KarmaPlatform.Entity> entities = new ConcurrentHashMap<>();
@@ -1064,6 +1084,23 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         }
     }
 
+    /**
+     * The {@link SceneManager} class helps to define a list of {@link Scene} into a game,
+     * and define/set the active one.
+     * <p>
+     * A list of {@link Scene} and default one are loaded from the configuration file thanks to
+     * the {@link SceneManager#load(String)} method, receiving the specific config key/value.
+     * <p>
+     * You can also manually programmatically {@link SceneManager#add(Scene)} a {@link Scene} instance.
+     * <p>
+     * After scenes have been loaded, you can {@link SceneManager#start()} the defautl defined {@link Scene},
+     * or {@link SceneManager#start(String)} a specific one.
+     * <p>
+     * Then you can switch to another {@link Scene} instance with {@link SceneManager#activate(String)}, the one you want
+     * to with its internal name.
+     *
+     * @author Frédéric Delorme
+     */
     public static class SceneManager {
         private final KarmaPlatform app;
         private Scene current;
@@ -1126,18 +1163,34 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         }
     }
 
+    /**
+     * The {@link World} object define the context of the game where any {@link Entity} will move in.
+     * <p>
+     * It is setting the {@link World#playArea}, the default environment {@link World#gravity}
+     * and also a {@link World#disturbances} list of {@link Disturbance}s instance to influence {@link Entity}'s moves.
+     * <p>
+     * You can freely add {@link Disturbance} instance to the {@link World} with {@link World#addDisturbance(Disturbance)}  .
+     * <p>
+     * A Default play area and a default gravity are initialized by the default constructor.
+     *
+     * @author Frédéric Delorme
+     */
     public static class World {
 
         private Rectangle2D playArea;
-        private double gravity;
+        private Vector2D gravity;
         private final List<Disturbance> disturbances = new ArrayList<>();
 
+        /**
+         * Create a {@link World} instance with a default playAre of 1000x1000
+         * and a gravity set the default Earth one: 0,981m/s².
+         */
         public World() {
-            gravity = 0.981;
+            gravity = new Vector2D(0.0, -0.981);
             playArea = new Rectangle2D.Double(0, 0, 1000, 1000);
         }
 
-        public World setGravity(double g) {
+        public World setGravity(Vector2D g) {
             this.gravity = g;
             return this;
         }
@@ -1147,7 +1200,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             return this;
         }
 
-        double getGravity() {
+        Vector2D getGravity() {
             return gravity;
         }
 
@@ -1155,7 +1208,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             return playArea;
         }
 
-        public World addPerturbation(Disturbance p) {
+        public World addDisturbance(Disturbance p) {
             disturbances.add(p);
             return this;
         }
@@ -1300,6 +1353,12 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             return side;
         }
 
+        @Override
+        public boolean equals(Object obj) {
+            CollisionEvent other = (CollisionEvent) obj;
+            return (other.getDst().equals(this.getDst()) && this.getSrc().equals(other.getSrc()))
+                    || (this.getSrc().equals(other.getDst()) && this.getDst().equals(other.getSrc()));
+        }
     }
 
     public enum CollisionSide {
@@ -1370,14 +1429,32 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         sceneManager.start("title");
         long current = System.currentTimeMillis();
         long previous = current;
+        long cumulatedTime = 0;
+        int frameCount = 0;
         double delta = 0;
+        double drawTime = 0;
+        Map<String, Object> stats = new HashMap<>();
         while (!exit) {
             current = System.currentTimeMillis();
             delta = current - previous;
             input();
-            update(delta);
-            draw();
+            update(delta, stats);
+            // draw onlu 60 times a second.
+            drawTime += delta;
+            if (drawTime > (1000.0 / 60.0)) {
+                draw(stats);
+                drawTime = 0;
+                frameCount++;
+            }
+            // compute frameRate.
+            cumulatedTime += delta;
+            if (cumulatedTime > 1000.0) {
+                frameCount = 0;
+                cumulatedTime = 0;
+            }
             previous = current;
+            stats.put("realTime", current);
+            stats.put("frameRate", frameCount);
         }
     }
 
@@ -1419,7 +1496,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      *
      * @param d ths is the elapsed time since the previous call.
      */
-    public void update(double d) {
+    public void update(double d, Map<String, Object> stats) {
 
         Collection<Entity> entities = sceneManager.getCurrent().getEntities();
         cullingProcess(this, d);
@@ -1450,10 +1527,18 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     /**
      * Apply the physic mechanics from the physic engine on the specified {@link Entity} instance,
      * applying the {@link World} context.
+     * <p>
+     * Configured gravity vector2D value is set as a negative value.
+     * <p>
+     * The game world is using <em>opposite</em> coordinates
+     * for compatibility with the Graphics2D API.
+     * <p>
+     * We need to reverse the gravity value and apply a reduction factor <em>0.01</em>
+     * as delay is given in millisecond.
      *
-     * @param world  the World object depicting the environment context.
-     * @param entity the Entity to be processed
-     * @param d      the elapsed tie since the previous call.
+     * @param world  the {@link World} object depicting the environment context.
+     * @param entity the {@link Entity} to be processed
+     * @param d      the elapsed time since the previous call.
      */
     private void applyPhysics(World world, Entity entity, double d) {
         // apply velocity computation
@@ -1466,7 +1551,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
             // Compute velocity based on acceleration of this Entity
             entity.velocity = entity.velocity
-                    .add(new Vector2D(0, (world.getGravity() * 0.01)))
+                    .add(world.getGravity().multiply(-0.01))
                     .add(entity.acceleration.multiply(d))
                     .limit(physicVelocityMax);
 
@@ -1495,6 +1580,13 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         }
     }
 
+    /**
+     * Apply all the {@link Disturbance} from the {@link World} when required on the {@link Entity}.
+     *
+     * @param world  the World instance
+     * @param entity the Entity to be modified by {@link Disturbance} world's list.
+     * @param d      the elapsed time since previous call.
+     */
     private void applyWorldDisturbance(World world, Entity entity, double d) {
         for (Disturbance dist : world.disturbances) {
             if (dist.box.intersects(entity.box) || dist.box.contains(entity.box)) {
@@ -1602,14 +1694,18 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                     ce.setCollisionSide(CollisionSide.TOP);
                 }
             }
-            e.getBehaviors().forEach(b -> b.onCollision(ce));
-            resolveCollision(ce);
-            e.register(ce);
-            o.getChild().forEach(c -> handleCollision(e, c));
-            e.updateBox();
-            if (debugFilter.contains(e.name) || debugFilter.isEmpty()) {
-                debug("handle collision on %s between '%s' and '%s'", ce.side, ce.getSrc(), ce.getDst());
+            // if this collision does not already exist, process it.
+            if (!e.getCollisions().contains(ce)) {
+                e.getBehaviors().forEach(b -> b.onCollision(ce));
+                resolveCollision(ce);
+                e.register(ce);
+                o.getChild().forEach(c -> handleCollision(e, c));
+                e.updateBox();
+                if (isDebugGreaterThan(4) && debugFilter.contains(e.name) || debugFilter.isEmpty()) {
+                    debug("handle collision on %s between '%s' and '%s'", ce.side, ce.getSrc(), ce.getDst());
+                }
             }
+
         }
     }
 
@@ -1794,7 +1890,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      * Drawing all the game graphics onto the screen buffer,
      * and then copy this buffer to the window.
      */
-    public void draw() {
+    public void draw(Map<String, Object> stats) {
         // prepare rendering pipeline
         Graphics2D g = buffer.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -1859,7 +1955,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                 null);
 
         if (isDebugGreaterThan(1)) {
-            displayDebugLineOnScreen(gs, entities);
+            displayDebugLineOnScreen(gs, stats, entities);
         }
 
         // Switch buffer strategy
@@ -1874,7 +1970,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      * @param gs       the {@link Graphics2D} API to use to draw onto the target window.
      * @param entities the list fo entities to extract information from.
      */
-    private void displayDebugLineOnScreen(Graphics2D gs, Collection<Entity> entities) {
+    private void displayDebugLineOnScreen(Graphics2D gs, Map<String, Object> stats, Collection<Entity> entities) {
         long countActiveEntities = entities.stream()
                 .filter(Entity::isActive).count();
         long countStaticEntities = entities.stream()
@@ -1972,7 +2068,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             if (Optional.ofNullable(e.getBackgroundColor()).isPresent()) {
                 g.setColor(e.getBackgroundColor());
             } else {
-                g.setColor(new Color(0.0f, 0.0f, 0.6f, 0.6f));
+                g.setColor(new Color(0.0f, 0.0f, 0.6f, 0.3f));
             }
             g.fillRect((int) e.getPosition().getX(), (int) e.getPosition().getY(), (int) e.w, (int) e.h);
         }
@@ -2152,6 +2248,11 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         sceneManager.getCurrent().onKeyReleased(e);
     }
 
+    public boolean isKeyPressed(int vkKeyCode) {
+        return keys[vkKeyCode];
+    }
+
+    /*---- Getters / Setters ----*/
 
     /**
      * Retrieve the {@link Graphics2D} API instance for  the current screen buffer.
@@ -2290,14 +2391,33 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         return world;
     }
 
-    public boolean isKeyPressed(int vkKeyCode) {
-        return keys[vkKeyCode];
+    public SceneManager getSceneManager() {
+        return sceneManager;
     }
 
+    public Configuration getConfiguration() {
+        return config;
+    }
+
+    /*---- Translation management ----*/
+
+    /**
+     * Retrieve a specific message from the translation according to its message key.
+     *
+     * @param keyMsg the key of the message in the translation files
+     * @return the corresponding translated message.
+     */
     public String getMessage(String keyMsg) {
         return replaceTemplate(messages.getString(keyMsg), messages);
     }
 
+    /**
+     * Process template text to replace "${specific.key}" by their translated values.
+     *
+     * @param template the template text to be parsed and where keys must be translated.
+     * @param values   the list of translated keys/values.
+     * @return the key translated resulting message.
+     */
     public static String replaceTemplate(String template, ResourceBundle values) {
         StringTokenizer tokenizer = new StringTokenizer(template, "${}", true);
         StringJoiner joiner = new StringJoiner("");
@@ -2324,14 +2444,6 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         }
 
         return joiner.toString();
-    }
-
-    public SceneManager getSceneManager() {
-        return sceneManager;
-    }
-
-    public Configuration getConfiguration() {
-        return config;
     }
 
 
