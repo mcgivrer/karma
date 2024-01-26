@@ -30,30 +30,22 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     private String title = "KarmaPlatform";
     private static final double MAX_VELOCITY = 32.0;
     private final ResourceBundle messages = ResourceBundle.getBundle("i18n.messages");
-
     private int maxEntitiesInSpace = 5;
     private int maxLevelsInSpace = 5;
     private boolean exit = false;
-
     private static int debug;
     private static String debugFilter = "";
-
     private final boolean[] keys = new boolean[1024];
-
     private JFrame frame;
     private BufferedImage buffer;
     private Dimension winSize;
     private Dimension resSize;
     private int strategyBufferNb;
-
     private long collisionCounter = 0;
-
     private final Configuration config;
     private World world;
     private Vector2D physicVelocityMax = new Vector2D(0, 0);
     private Vector2D physicAccelerationMax = new Vector2D(0, 0);
-
-
     private SceneManager sceneManager;
     private SpacePartition spacePartition;
 
@@ -1426,20 +1418,21 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      * </ul>
      */
     private void loop() {
-        sceneManager.start("title");
+        sceneManager.start();
         long current = System.currentTimeMillis();
         long previous = current;
         long cumulatedTime = 0;
         int frameCount = 0;
         double delta = 0;
         double drawTime = 0;
+        int frameRate = 0;
         Map<String, Object> stats = new HashMap<>();
-        while (!exit) {
+        while (!isExit()) {
             current = System.currentTimeMillis();
             delta = current - previous;
             input();
             update(delta, stats);
-            // draw onlu 60 times a second.
+            // draw only 60 times a second.
             drawTime += delta;
             if (drawTime > (1000.0 / 60.0)) {
                 draw(stats);
@@ -1447,14 +1440,15 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                 frameCount++;
             }
             // compute frameRate.
-            cumulatedTime += delta;
+            cumulatedTime += (long) delta;
             if (cumulatedTime > 1000.0) {
+                frameRate = frameCount;
                 frameCount = 0;
                 cumulatedTime = 0;
             }
             previous = current;
             stats.put("realTime", current);
-            stats.put("frameRate", frameCount);
+            stats.put("frameRate", frameRate);
         }
     }
 
@@ -1984,8 +1978,9 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         gs.fillRect(8, winSize.height + 8, winSize.width, 32);
         gs.setColor(Color.ORANGE);
         gs.drawString(
-                String.format("[ debug: %d | entity(sta:%d,dyn:%d,non:%d) | active:%d | collision:%d ]",
+                String.format("[ debug: %d | fps:%03d | entity(sta:%d,dyn:%d,non:%d) | active:%d | collision:%d ]",
                         debug,
+                        (Integer) stats.getOrDefault("frameRate", 0.0),
                         countStaticEntities,
                         countDynamicEntities,
                         countNoneEntities,
@@ -2275,48 +2270,6 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      */
     public void setExit(boolean exit) {
         this.exit = exit;
-    }
-
-    /**
-     * @return JFrame return the frame
-     */
-    public JFrame getFrame() {
-        return frame;
-    }
-
-    /**
-     * @param buffer the buffer to set
-     */
-    public void setBuffer(BufferedImage buffer) {
-        this.buffer = buffer;
-    }
-
-    /**
-     * @return Dimension return the winSize
-     */
-    public Dimension getWinSize() {
-        return winSize;
-    }
-
-    /**
-     * @param winSize the winSize to set
-     */
-    public void setWinSize(Dimension winSize) {
-        this.winSize = winSize;
-    }
-
-    /**
-     * @return Dimension return the resSize
-     */
-    public Dimension getResSize() {
-        return resSize;
-    }
-
-    /**
-     * @param resSize the resSize to set
-     */
-    public void setResSize(Dimension resSize) {
-        this.resSize = resSize;
     }
 
     /**
