@@ -94,7 +94,7 @@ NC='\033[0m'
 export SRC=src
 export LIBS=lib
 export LIB_TEST=$LIBS/test/junit-platform-console-standalone-1.10.1.jar
-export LIB_CUCUMBER_TEST=$LIBS/test/cucumber-core-7.15.0.jar${FS}$LIBS/test/cucumber-java8-7.9.0.jar${FS}$LIBS/test/cucumber-junit-platform-engine-7.15.0.jar
+export LIB_CUCUMBER_TEST=$LIBS/test/cucumber-core-7.15.0.jar${FS}$LIBS/test/cucumber-java8-7.9.0.jar${FS}$LIBS/test/cucumber-junit-platform-engine-7.15.0.jar${FS}$LIBS/test/cucumber-expressions-9.0.0.jar${FS}$LIBS/test/datatable-7.9.0.jar${FS}$LIBS/test/datatable-dependencies-3.0.0.jar${FS}$LIBS/test/junit-platform-suite-1.9.3.jar
 export LIB_CHECKSTYLES=$LIBS/tools/checkstyle-10.12.3-all.jar
 export TARGET=target
 export BUILD=$TARGET/build
@@ -222,16 +222,22 @@ function executeTests() {
   #list test sources
   find $SRC/main -name '*.java' >$TARGET/sources.lst
   find $SRC/test -name '*.java' >$TARGET/test-sources.lst
-  javac -source $SOURCE_VERSION -encoding $SOURCE_ENCODING $COMPILATION_OPTS -cp ".${FS}$LIB_TEST${FS}$LIB_CUCUMBER_TEST${FS}${EXTERNAL_JARS}" -d $TEST_CLASSES @$TARGET/sources.lst @$TARGET/test-sources.lst
+  javac -source ${SOURCE_VERSION} -encoding ${SOURCE_ENCODING} ${COMPILATION_OPTS} \
+   -cp ".${FS}$LIB_TEST${FS}$LIB_CUCUMBER_TEST${FS}${EXTERNAL_JARS}" \
+   -d $TEST_CLASSES @$TARGET/sources.lst @$TARGET/test-sources.lst
   echo "execute tests through JUnit"
-  java $JAR_OPTS -jar ${LIB_TEST} --cp "${EXTERNAL_JARS}${FS}${CLASSES}${FS}${TEST_CLASSES}${FS}${FS}." --scan-class-path
-  echo "java $JAR_OPTS -jar ${LIB_TEST} --cp \"${EXTERNAL_JARS}${FS}${CLASSES}${FS}${TEST_CLASSES}${FS}${FS}.\" --scan-class-path"
+  echo "--"
+  echo "java $JAR_OPTS -jar \"${LIB_TEST}\" -cp \"${LIB_CUCUMBER_TEST}${FS}${EXTERNAL_JARS}${FS}${CLASSES}${FS}${TEST_CLASSES}${FS}${FS}.\" --scan-class-path"
+  echo "--"
+  java $JAR_OPTS -jar "${LIB_TEST}" \
+   -cp "${LIB_CUCUMBER_TEST}${FS}${EXTERNAL_JARS}${FS}${CLASSES}${FS}${TEST_CLASSES}${FS}${FS}." \
+   --scan-class-path
   echo -e "   |_ ${GREEN}done$NC"
   echo "execute Gherkin tests through Cucumber"
   echo "--"
-  echo "java $JAR_OPTS -jar ${LIB_CUCUMBER_TEST} -cp \"${EXTERNAL_JARS}${FS}${LIB_CUCUMBER_TEST}${FS}${CLASSES}${FS}${TEST_CLASSES}${FS}${TEST_RESOURCES}${FS}.\" cucumber.api.cli.Main --glue com.karma.test.features src/test/resources/features/"
+  echo "java $JAR_OPTS -jar \"${LIB_CUCUMBER_TEST}\" -cp \"${LIB_CUCUMBER_TEST}${FS}${EXTERNAL_JARS}${FS}${CLASSES}${FS}${TEST_CLASSES}${FS}${TEST_RESOURCES}${FS}.\" cucumber.api.cli.Main --glue com.karma.test.features src/test/resources/features/"
   echo "--"
-  java $JAR_OPTS -jar ${LIB_CUCUMBER_TEST} -cp "${EXTERNAL_JARS}${FS}${LIB_CUCUMBER_TEST}${FS}${CLASSES}${FS}${TEST_CLASSES}${FS}${TEST_RESOURCES}${FS}." cucumber.api.cli.Main --glue com.karma.test.features src/test/resources/features/
+  java $JAR_OPTS -jar "${LIB_CUCUMBER_TEST}" --cp "${LIB_CUCUMBER_TEST}${FS}${EXTERNAL_JARS}${FS}${CLASSES}${FS}${TEST_CLASSES}${FS}${TEST_RESOURCES}${FS}." cucumber.api.cli.Main --glue com.karma.test.features src/test/resources/features/
   echo -e "   |_ ${GREEN}done$NC"
   echo "- execute tests through JUnit/Cucumber $SRC/test." >>target/build.log
 }
