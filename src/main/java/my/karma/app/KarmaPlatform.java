@@ -236,6 +236,10 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                 }
             });
         }
+
+        public Properties getProperties() {
+            return config;
+        }
     }
 
     /**
@@ -1274,12 +1278,16 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      * ---- Where everything start ----
      */
 
-    public KarmaPlatform() {
+    public KarmaPlatform(String configPath) {
         info("Initialization karmaApp %s (%s)%n",
                 messages.getString("app.name"),
                 messages.getString("app.version"));
         config = new Configuration(this);
-        config.load("/config.properties");
+        config.load(configPath);
+    }
+
+    public KarmaPlatform() {
+        this("/config.properties");
     }
 
     public void run(String[] args) {
