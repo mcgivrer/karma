@@ -2119,20 +2119,14 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     private static void drawEntity(Graphics2D g, Entity e) {
         switch (e.type) {
             case RECTANGLE -> {
-                if (Optional.of(e.getBackgroundColor()).isPresent()) {
-                    g.setColor(e.getBackgroundColor());
-                    g.fillRect((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
-                }
-                if (Optional.of(e.getForegroundColor()).isPresent()) {
-                    g.setColor(e.getForegroundColor());
-                    g.drawRect((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
-                }
+                g.setColor(e.getBackgroundColor());
+                g.fillRect((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
+                g.setColor(e.getForegroundColor());
+                g.drawRect((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
             }
             case ELLIPSE -> {
-                if (Optional.of(e.getBackgroundColor()).isPresent()) {
-                    g.setColor(e.getBackgroundColor());
-                    g.fillOval((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
-                }
+                g.setColor(e.getBackgroundColor());
+                g.fillOval((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
                 g.setColor(e.fgColor);
                 g.drawOval((int) e.position.x, (int) e.position.y, (int) e.w, (int) e.h);
             }

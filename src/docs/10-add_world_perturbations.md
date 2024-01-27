@@ -32,6 +32,117 @@ public static class Disturbance extends Entity {
 }
 ```
 
+### World have some disturbances
+
+And add the `Disturbance` to the `World` class:
+
+```java
+public static class World {
+
+        private Rectangle2D playArea;
+        private double gravity;
+        //<1>
+        private final List<Disturbance> disturbances = new ArrayList<>();
+        //...
+        //<2>
+        public World addPerturbation(Disturbance p) {
+            disturbances.add(p);
+            return this;
+        }
+        //<3>
+        public List<Disturbance> getDisturbances() {
+            return disturbances;
+        }
+    }
+```
+
+1. Adding the list of `Disturbance`,
+2. method to add a `Disturbance` to the `World`,
+3. getting all the `Disturbance` list from the `World`.
+
+### Integrate Disturbance in the physic computation
+
+then, our `Entity` must be moving according to the new `Disturbance` from the `World`, we will modify 
+the `KarmaPlatform#update()` :
+
+```java
+public class KarmaPlatform{
+    //...
+    public void update(double d) {
+        //...
+        entities.stream()
+                .filter(Entity::isActive)
+                .forEach(e -> {
+                    if (!e.getPhysicType().equals(PhysicType.NONE)) {
+                        // if concerned, apply World disturbances.
+                        applyWorldDisturbance(world, e, d);
+                        // compute physic on the Entity (velocity & position)
+                        applyPhysics(world, e, d);
+                        //...
+                    }
+                });
+        //...
+        }
+    //...
+}
+```
+
+So the new `applyWorldDisturbance()` is as below :
+
+```java
+private void applyWorldDisturbance(World world, Entity entity, double d) {
+    for (Disturbance dist : world.disturbances) {
+        if (dist.box.intersects(entity.box) || dist.box.contains(entity.box)) {
+            entity.forces.addAll(dist.forces);
+        }
+    }
+}
+```
+So before computing physique for each entity, the intersecting/containing Disturbance force is applied on.
+
+### Displaying for debug purpose
+
+Ok, by default wind is not visible (as soon as no feather are swiped away by), for debug purpose (and also for fun), we
+will add a way to display a transparent rectangle showing the wind area.
+
+```java
+
+```
+
+
+
+## Wind simulation
+
+To simulate a wind, it is nothing more than adding a force vector on all entity crossing a specific area in the play 
+area. we will first start by adding such thing to our demo.
+
+```java
+import my.karma.app.AbstractScene;
+
+public class PlayScene extends AbstractScene{
+    //...
+    @Override
+    public void create(KarmaPlatform app) {
+        KarmaPlatform.World w = getWorld();
+        w.addPerturbation((KarmaPlatform.Disturbance)
+                new KarmaPlatform.Disturbance("wind")
+                        .setPosition(0, 0)
+                        .setSize(w.getPlayArea().getWidth(), w.getPlayArea().getHeight() * 0.8)
+                        .addForce(new KarmaPlatform.Vector2D(0.002, 0.0))
+        );
+        //...
+    }    
+    //...
+}
+ ```
+
+Then running this new demo will drive all the Entity contained or intersecting by this Disturbance to be moved 
+thanks to the added force. You will see all the generated objects moving to the right.
+
+adding some debug
+
+
+
 ## Water simulation target
 
 To simulate an object floating on water in a Java game physics engine, you can use Archimedes' buoyancy force and
