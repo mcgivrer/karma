@@ -106,10 +106,34 @@ Ok, by default wind is not visible (as soon as no feather are swiped away by), f
 will add a way to display a transparent rectangle showing the wind area.
 
 ```java
+//...
+private void draw(Graphics2D g, Entity e) {
+    switch (e.getClass().getSimpleName()) {
+        //...
+        case "Disturbance" -> {
+            drawDisturbance(g, (Disturbance) e);
+        }
+    }
+    //...
+}
+//...
+```
+And the corresponding method:
 
+```java
+private void drawDisturbance(Graphics2D g, Disturbance e) {
+    if (isDebugGreaterThan(3)) {
+        if (Optional.ofNullable(e.getBackgroundColor()).isPresent()) {
+            g.setColor(e.getBackgroundColor());
+        } else {
+            g.setColor(new Color(0.0f, 0.0f, 0.6f, 0.3f));
+        }
+        g.fillRect((int) e.getPosition().getX(), (int) e.getPosition().getY(), (int) e.w, (int) e.h);
+    }
+}
 ```
 
-
+>**NOTE** We will use a default color if none are already defined.
 
 ## Wind simulation
 
