@@ -189,7 +189,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                 switch (arg[0]) {
                     case "app.exit" -> app.exit = Boolean.parseBoolean(arg[1]);
                     case "app.debug" -> debug = Integer.parseInt(arg[1]);
-                    case "app.debug.filter" -> debugFilter = arg[1];
+                    case "app.debug.filter" -> debugFilter = arg.length > 1 ? arg[1] : "";
                     case "app.title" -> app.title = arg[1];
                     case "app.window.size" -> {
                         String[] res = arg[1].split("x");
