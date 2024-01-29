@@ -2,10 +2,11 @@ package my.karma.app.tests;
 
 import my.karma.app.KarmaPlatform;
 import my.karma.app.tests.scenes.TestScene;
-import org.junit.Before;
-import org.junit.Test;
+
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
 import org.junit.platform.suite.api.Suite;
 
 import java.awt.*;
@@ -15,11 +16,11 @@ import java.util.Optional;
 
 @Suite(failIfNoTests = false)
 public class KarmaConfigTest {
-    KarmaPlatform app;
-    KarmaPlatform.Configuration config;
+    static KarmaPlatform app;
+    static KarmaPlatform.Configuration config;
 
-    @Before
-    public void setup() {
+    @BeforeAll
+    public static void setup() {
         app = new KarmaPlatform("/test-config.properties");
         config = new KarmaPlatform.Configuration(app);
     }
@@ -51,25 +52,31 @@ public class KarmaConfigTest {
         Assertions.assertEquals(
                 app.getWorld()
                         .getPlayArea(),
-                new Rectangle2D.Double(0.0, 0.0, 800.0, 600.0));
+                new Rectangle2D.Double(0.0, 0.0, 800.0, 600.0),
+                "Configuration has no Play area defined !");
         Assertions.assertEquals(
                 app.getWorld()
                         .getGravity(),
-                new KarmaPlatform.Vector2D(0.0, -0.00981));
+                new KarmaPlatform.Vector2D(0.0, -0.00981),
+                "Configuration has no gravity defined !");
         Assertions.assertEquals(
                 app.getWorld()
                         .getVelocityMax(),
-                new KarmaPlatform.Vector2D(0.2, 0.2));
+                new KarmaPlatform.Vector2D(0.2, 0.2),
+                "Configuration has no velocity max defined !");
         Assertions.assertEquals(
                 app.getWorld()
                         .getAccelerationMax(),
-                new KarmaPlatform.Vector2D(0.012, 0.012));
+                new KarmaPlatform.Vector2D(0.012, 0.012),
+                "Configuration has no acceleration max defined !");
         Assertions.assertEquals(
                 app.getWorld()
-                        .getPartitioningLevelMax(), 5);
+                        .getPartitioningLevelMax(), 5,
+                "Configuration has no partitioning max level defined !");
         Assertions.assertEquals(
                 app.getWorld()
-                        .getPartitioningCellPerLevel(), 5);
+                        .getPartitioningCellPerLevel(), 5,
+                "Configuration has no max number of cells in a partition defined !");
     }
 
     @Test
