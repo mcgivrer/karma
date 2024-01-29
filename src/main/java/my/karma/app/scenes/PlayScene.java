@@ -33,6 +33,14 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
                         .setSize(w.getPlayArea().getWidth(), w.getPlayArea().getHeight() * 0.8)
                         .addForce(new KarmaPlatform.Vector2D(0.002, 0.0))
         );
+        w.addDisturbance((KarmaPlatform.Disturbance)
+                new KarmaPlatform.Disturbance("mag")
+                        .setPosition(0, 0)
+                        .setSize(w.getPlayArea().getWidth() * 0.15, w.getPlayArea().getHeight())
+                        .setForegroundColor(new Color(0.7f, 0.6f, 0.0f, 0.5f))
+                        .setBackgroundColor(new Color(0.7f, 0.6f, 0.0f, 0.5f))
+                        .addForce(new KarmaPlatform.Vector2D(-0.002, -0.012))
+        );
         createPlatforms(app);
 
         // Add camera
