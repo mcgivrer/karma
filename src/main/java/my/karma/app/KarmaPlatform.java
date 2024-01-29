@@ -48,6 +48,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     private Vector2D physicAccelerationMax = new Vector2D(0, 0);
     private SceneManager sceneManager;
     private SpacePartition spacePartition;
+    private boolean testMode;
 
     /**
      * Entity type for rendering purpose.
@@ -187,6 +188,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             lArgs.forEach(s -> {
                 String[] arg = s.split("=");
                 switch (arg[0]) {
+                    case "app.test.mode" -> app.testMode = Boolean.parseBoolean(arg[1]);
                     case "app.exit" -> app.exit = Boolean.parseBoolean(arg[1]);
                     case "app.debug" -> debug = Integer.parseInt(arg[1]);
                     case "app.debug.filter" -> debugFilter = arg.length > 1 ? arg[1] : "";
@@ -234,6 +236,10 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                     default -> error("Unknown %s attribute ", s);
                 }
             });
+        }
+
+        public Properties getProperties() {
+            return config;
         }
     }
 
@@ -1153,6 +1159,10 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         public void setDefaultSceneName(String s) {
             this.defaultSceneName = s;
         }
+
+        public Collection<Scene> getScenes() {
+            return scenes.values();
+        }
     }
 
     /**
@@ -1366,17 +1376,23 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      */
 
     public KarmaPlatform() {
+        this("/config.properties");
+    }
+
+    public KarmaPlatform(String configFilePath) {
         info("Initialization karmaApp %s (%s)%n",
                 messages.getString("app.name"),
                 messages.getString("app.version"));
         config = new Configuration(this);
-        config.load("/config.properties");
+        config.load(configFilePath);
     }
 
     public void run(String[] args) {
         init(args);
         loop();
-        dispose();
+        if (!isTestMode()) {
+            dispose();
+        }
     }
 
     /**
@@ -1427,7 +1443,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         double drawTime = 0;
         int frameRate = 0;
         Map<String, Object> stats = new HashMap<>();
-        while (!isExit()) {
+        while (!isExit() && !isTestMode()) {
             current = System.currentTimeMillis();
             delta = current - previous;
             input();
@@ -1450,6 +1466,10 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             stats.put("realTime", current);
             stats.put("frameRate", frameRate);
         }
+    }
+
+    public boolean isTestMode() {
+        return testMode;
     }
 
     /**
@@ -2150,7 +2170,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     /**
      * Freeing all the reserved resources.
      */
-    private void dispose() {
+    public void dispose() {
         info("End of karmaApp Wind");
         if (Optional.ofNullable(sceneManager.getCurrent()).isPresent()) {
             sceneManager.getCurrent().dispose(this);
