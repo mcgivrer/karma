@@ -51,4 +51,9 @@ public class TitleScene extends KarmaPlatform.AbstractScene {
             app.getSceneManager().activate("play");
         }
     }
+
+    @Override
+    public String getName() {
+        return "title";
+    }
 }

@@ -30,8 +30,6 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     private String title = "KarmaPlatform";
     private static final double MAX_VELOCITY = 32.0;
     private final ResourceBundle messages = ResourceBundle.getBundle("i18n.messages");
-    private int maxEntitiesInSpace = 5;
-    private int maxLevelsInSpace = 5;
     private boolean exit = false;
     private static int debug;
     private static String debugFilter = "";
@@ -44,10 +42,9 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     private long collisionCounter = 0;
     private final Configuration config;
     private World world;
-    private Vector2D physicVelocityMax = new Vector2D(0, 0);
-    private Vector2D physicAccelerationMax = new Vector2D(0, 0);
     private SceneManager sceneManager;
     private SpacePartition spacePartition;
+    private boolean testMode;
 
     /**
      * Entity type for rendering purpose.
@@ -147,6 +144,12 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         public double getDistance(Vector2D point) {
             return point.subtract(this).magnitude();
         }
+
+        @Override
+        public boolean equals(Object obj) {
+            Vector2D vObj = (Vector2D) obj;
+            return x == vObj.x && y == vObj.y;
+        }
     }
 
     /**
@@ -187,6 +190,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             lArgs.forEach(s -> {
                 String[] arg = s.split("=");
                 switch (arg[0]) {
+                    case "app.test.mode" -> app.testMode = Boolean.parseBoolean(arg[1]);
                     case "app.exit" -> app.exit = Boolean.parseBoolean(arg[1]);
                     case "app.debug" -> debug = Integer.parseInt(arg[1]);
                     case "app.debug.filter" -> debugFilter = arg.length > 1 ? arg[1] : "";
@@ -213,17 +217,17 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                     }
                     case "app.physic.velocity.max" -> {
                         String[] vals = arg[1].substring("(".length(), arg[1].length() - ")".length()).split(",");
-                        app.physicVelocityMax = new Vector2D(Double.parseDouble(vals[0]), Double.parseDouble(vals[1]));
+                        app.world.velocityMax = new Vector2D(Double.parseDouble(vals[0]), Double.parseDouble(vals[1]));
                     }
                     case "app.physic.acceleration.max" -> {
                         String[] vals = arg[1].substring("(".length(), arg[1].length() - ")".length()).split(",");
-                        app.physicAccelerationMax = new Vector2D(Double.parseDouble(vals[0]), Double.parseDouble(vals[1]));
+                        app.world.accelerationMax = new Vector2D(Double.parseDouble(vals[0]), Double.parseDouble(vals[1]));
                     }
                     case "app.physic.partitioning.max.level" -> {
-                        app.maxLevelsInSpace = Integer.parseInt(arg[1]);
+                        app.world.partitionLevelMax = Integer.parseInt(arg[1]);
                     }
                     case "app.physic.partitioning.max.node.per.level" -> {
-                        app.maxEntitiesInSpace = Integer.parseInt(arg[1]);
+                        app.world.partitionCellPerLevel = Integer.parseInt(arg[1]);
                     }
                     case "app.scenes.list" -> {
                         app.sceneManager = new SceneManager(app);
@@ -234,6 +238,10 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                     default -> error("Unknown %s attribute ", s);
                 }
             });
+        }
+
+        public Properties getProperties() {
+            return config;
         }
     }
 
@@ -726,8 +734,8 @@ public class KarmaPlatform extends JPanel implements KeyListener {
          */
         public SpacePartition(KarmaPlatform app) {
             this(0, app.world.getPlayArea().getBounds());
-            this.maxObjectsPerNode = app.maxEntitiesInSpace;
-            this.maxTreeLevels = app.maxLevelsInSpace;
+            this.maxObjectsPerNode = app.world.getPartitioningCellPerLevel();
+            this.maxTreeLevels = app.world.getPartitioningLevelMax();
         }
 
         /**
@@ -744,7 +752,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         }
 
         /**
-         * Split the current SpacePartition into 4 sub spaces.
+         * Split the current SpacePartition into four subspaces.
          */
         private void split() {
             int subWidth = (int) (getWidth() / 2);
@@ -1023,6 +1031,8 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
         default void onKeyReleased(KeyEvent ke) {
         }
+
+        String getName();
     }
 
     /**
@@ -1153,6 +1163,14 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         public void setDefaultSceneName(String s) {
             this.defaultSceneName = s;
         }
+
+        public Collection<Scene> getScenes() {
+            return scenes.values();
+        }
+
+        public String getDefaultSceneName() {
+            return defaultSceneName;
+        }
     }
 
     /**
@@ -1172,6 +1190,10 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         private Rectangle2D playArea;
         private Vector2D gravity;
         private final List<Disturbance> disturbances = new ArrayList<>();
+        private Vector2D velocityMax = new Vector2D(0.1, 0.1);
+        private Vector2D accelerationMax = new Vector2D(0.01, 0.01);
+        private int partitionLevelMax = 4;
+        private int partitionCellPerLevel = 10;
 
         /**
          * Create a {@link World} instance with a default playAre of 1000x1000
@@ -1192,7 +1214,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             return this;
         }
 
-        Vector2D getGravity() {
+        public Vector2D getGravity() {
             return gravity;
         }
 
@@ -1207,6 +1229,22 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
         public List<Disturbance> getDisturbances() {
             return disturbances;
+        }
+
+        public Vector2D getVelocityMax() {
+            return velocityMax;
+        }
+
+        public Vector2D getAccelerationMax() {
+            return accelerationMax;
+        }
+
+        public int getPartitioningLevelMax() {
+            return partitionLevelMax;
+        }
+
+        public int getPartitioningCellPerLevel() {
+            return partitionCellPerLevel;
         }
     }
 
@@ -1366,17 +1404,23 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      */
 
     public KarmaPlatform() {
+        this("/config.properties");
+    }
+
+    public KarmaPlatform(String configFilePath) {
         info("Initialization karmaApp %s (%s)%n",
                 messages.getString("app.name"),
                 messages.getString("app.version"));
         config = new Configuration(this);
-        config.load("/config.properties");
+        config.load(configFilePath);
     }
 
     public void run(String[] args) {
         init(args);
         loop();
-        dispose();
+        if (!isTestMode()) {
+            dispose();
+        }
     }
 
     /**
@@ -1427,7 +1471,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         double drawTime = 0;
         int frameRate = 0;
         Map<String, Object> stats = new HashMap<>();
-        while (!isExit()) {
+        while (!isExit() && !isTestMode()) {
             current = System.currentTimeMillis();
             delta = current - previous;
             input();
@@ -1450,6 +1494,10 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             stats.put("realTime", current);
             stats.put("frameRate", frameRate);
         }
+    }
+
+    public boolean isTestMode() {
+        return testMode;
     }
 
     /**
@@ -1541,13 +1589,13 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             // compute acceleration for this Entity
             entity.acceleration = entity.acceleration
                     .addAll(entity.forces)
-                    .limit(physicAccelerationMax);
+                    .limit(world.getAccelerationMax());
 
             // Compute velocity based on acceleration of this Entity
             entity.velocity = entity.velocity
                     .add(world.getGravity().multiply(-0.01))
                     .add(entity.acceleration.multiply(d))
-                    .limit(physicVelocityMax);
+                    .limit(world.getVelocityMax());
 
             // Compute position according to velocity
             entity.position = entity.position.add(entity.getVelocity().multiply(d));
@@ -1736,11 +1784,11 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         Vector2D impulse = normal.multiply(j);
         if (ce.getSrc().getPhysicType().equals(PhysicType.DYNAMIC)) {
             ce.getSrc().setVelocity(v1.subtract(impulse.multiply(1 / m1)));
-            limitVelocity(ce.getSrc());
+            limitVelocity(world, ce.getSrc());
         }
         if (ce.getDst().getPhysicType().equals(PhysicType.DYNAMIC)) {
             ce.getDst().setVelocity(v2.add(impulse.multiply(1 / m2)));
-            limitVelocity(ce.getDst());
+            limitVelocity(world, ce.getDst());
         }
 
         // ne fonctionne pas avec le contact des object static...
@@ -1858,10 +1906,10 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     /**
      * Limit the resulting velocity on {@link Entity} the max value of {@link KarmaPlatform#MAX_VELOCITY}.
      */
-    private void limitVelocity(Entity entity) {
+    private void limitVelocity(World world, Entity entity) {
         Vector2D velocity = entity.getVelocity();
-        if (velocity.magnitude() > physicVelocityMax.magnitude()) {
-            entity.setVelocity(velocity.normalize().multiply(physicVelocityMax.magnitude()));
+        if (velocity.magnitude() > world.getVelocityMax().magnitude()) {
+            entity.setVelocity(velocity.normalize().multiply(world.getVelocityMax().magnitude()));
         }
     }
 
@@ -2150,7 +2198,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     /**
      * Freeing all the reserved resources.
      */
-    private void dispose() {
+    public void dispose() {
         info("End of karmaApp Wind");
         if (Optional.ofNullable(sceneManager.getCurrent()).isPresent()) {
             sceneManager.getCurrent().dispose(this);
@@ -2280,6 +2328,14 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         this.strategyBufferNb = strategyBufferNb;
     }
 
+    public Dimension getRenderingBufferSize() {
+        return resSize;
+    }
+
+    public Dimension getWindowSize() {
+        return winSize;
+    }
+
     /**
      * @return long return the collisionCounter
      */
@@ -2329,11 +2385,6 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         this.spacePartition = spacePartition;
     }
 
-
-    public Dimension getScreenSize() {
-        return resSize;
-    }
-
     public World getWorld() {
         return world;
     }
@@ -2344,6 +2395,18 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
     public Configuration getConfiguration() {
         return config;
+    }
+
+    public int getDebugLevel() {
+        return debug;
+    }
+
+    public String getDebugEntityFilteredName() {
+        return debugFilter;
+    }
+
+    public Dimension getScreenSize() {
+        return resSize;
     }
 
     /*---- Translation management ----*/

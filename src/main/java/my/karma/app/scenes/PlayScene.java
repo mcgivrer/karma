@@ -315,6 +315,11 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         }
     }
 
+    @Override
+    public String getName() {
+        return "play";
+    }
+
     private void removeEnemies(int nbEnemies) {
         List<KarmaPlatform.Entity> entitiesToDelete = getEntities().stream().filter(e -> e.name.startsWith("enemy_")).toList();
         if (nbEnemies == 0) {
