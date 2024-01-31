@@ -11,7 +11,7 @@ the window bitmap. The window itself will support a buffer strategy to avoid fli
 This is why a BufferedImage and JFrame are used to display our game.
 
 ```java
-public class KarmaApp extends JPanel implements KeyListener {
+public class KarmaPlatform extends JPanel implements KeyListener {
     //...
     private JFrame frame;
     private BufferedImage buffer;
@@ -28,7 +28,7 @@ according to their priority value.
 The buffer is prepared for antialiasing processing `<1>`, and cleared `<2>`.
 
 ```java
-public class KarmaApp extends JPanel implements KeyListener {
+public class KarmaPlatform extends JPanel implements KeyListener {
     //...
 
     public void draw() {
@@ -48,7 +48,7 @@ public class KarmaApp extends JPanel implements KeyListener {
 A temporary background composed of a simple grid is drawn on buffer `<3>`.
 
 ```java
-public class KarmaApp extends JPanel implements KeyListener {
+public class KarmaPlatform extends JPanel implements KeyListener {
     //...
 
     public void draw() {
@@ -74,7 +74,7 @@ to the internal buffer `<4.1>`.
 If some `Behavior` is declared on the Entity, call the onDraw event on each `<4.2>`.
 
 ```java
-public class KarmaApp extends JPanel implements KeyListener {
+public class KarmaPlatform extends JPanel implements KeyListener {
     //...
 
     public void draw() {
@@ -116,7 +116,7 @@ When everything is processed, the buffer is copied onto the window `<5>`.
 And ultimately, the buffers from the buffer strategy are swapped `<6>`.
 
 ```java
-public class KarmaApp extends JPanel implements KeyListener {
+public class KarmaPlatform extends JPanel implements KeyListener {
     //...
 
     public void draw() {
@@ -136,10 +136,10 @@ public class KarmaApp extends JPanel implements KeyListener {
 }
 ```
 
-And this `KarmaApp#draw()` method s called from the main loop `<7>`:
+And this `KarmaPlatform#draw()` method s called from the main loop `<7>`:
 
 ```java
-public class KarmaApp extends JPanel implements KeyListener {
+public class KarmaPlatform extends JPanel implements KeyListener {
     //...
     private void loop() {
         createScene();
@@ -162,7 +162,7 @@ public class KarmaApp extends JPanel implements KeyListener {
 
 That's it !
 
-Running the KarmaApp class will display the following window:
+Running the KarmaPlatform class will display the following window:
 
 ![Rendering our demonstration scene with rectangle and Ellipses](illustrations/02-about_rendering-01.png)
 

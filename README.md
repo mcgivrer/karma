@@ -12,7 +12,7 @@ A game oriented java project proposing basic implementation for
 
 ## Description
 
-The project is composed of one main class `KarmaApp` that contains subclasses.
+The project is composed of one main class `KarmaPlatform` that contains subclasses.
 
 ```plantuml
 @startuml
@@ -20,7 +20,7 @@ The project is composed of one main class `KarmaApp` that contains subclasses.
 hide methods
 hide attributes
 
-class KarmaApp extends JPanel implements KeyListener{
+class KarmaPlatform extends JPanel implements KeyListener{
   +createScene()
   +input()
   +update(d:long)
@@ -31,7 +31,7 @@ class KarmaApp extends JPanel implements KeyListener{
 }
 package JDK{
 }
-show KarmaApp methods 
+show KarmaPlatform methods 
 enum EntityType
 class Entity
 class World
@@ -47,9 +47,9 @@ AbstractScene -> World:world
 AbstractScene "1"-->"n" Behavior:behaviors
 Entity "1" -> "n" Behavior:behaviors
 Entity -> EntityType:type
-KarmaApp --> BufferedImage:buffer
-KarmaApp -->  JFrame:frame
-KarmaApp --> SceneManager:sceneManager
+KarmaPlatform --> BufferedImage:buffer
+KarmaPlatform -->  JFrame:frame
+KarmaPlatform --> SceneManager:sceneManager
 SceneManager "1"->"n" Scene:scenes
 
 @enduml
