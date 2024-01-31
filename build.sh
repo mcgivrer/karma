@@ -94,6 +94,17 @@ NC='\033[0m'
 export SRC=src
 export LIBS=lib
 export LIB_TEST=$LIBS/test/junit-platform-console-standalone-1.10.1.jar
+export LIB_CUCUMBER_CORE=$LIBS/test/cucumber/cucumber-core-7.7.0.jar
+export LIB_CUCUMBER_TEST=$LIBS/test/junit-platform-console-standalone-1.10.1.jar\
+${FS}$LIBS/test/cucumber/cucumber-core-7.7.0.jar\
+${FS}$LIBS/test/cucumber/cucumber-java8-7.7.0.jar\
+${FS}$LIBS/test/cucumber/cucumber-junit-platform-engine-7.7.0.jar\
+${FS}$LIBS/test/cucumber/cucumber-expressions-16.0.0.jar\
+${FS}$LIBS/test/cucumber/cucumber-gherkin-7.7.0.jar\
+${FS}$LIBS/test/cucumber/gherkin-24.0.0.jar\
+${FS}$LIBS/test/cucumber/html-formatter-20.0.0.jar\
+${FS}$LIBS/test/cucumber/tag-expressions-4.1.0.jar
+#${FS}$LIBS/test/cucumber/junit-platform-suite-1.9.3.jar
 export LIB_CHECKSTYLES=$LIBS/tools/checkstyle-10.12.3-all.jar
 export TARGET=target
 export BUILD=$TARGET/build
@@ -221,14 +232,22 @@ function executeTests() {
   #list test sources
   find $SRC/main -name '*.java' >$TARGET/sources.lst
   find $SRC/test -name '*.java' >$TARGET/test-sources.lst
-  javac -source $SOURCE_VERSION -encoding $SOURCE_ENCODING $COMPILATION_OPTS -cp ".${FS}$LIB_TEST${FS}${EXTERNAL_JARS}" -d $TEST_CLASSES @$TARGET/sources.lst @$TARGET/test-sources.lst
+  javac -source ${SOURCE_VERSION} -encoding ${SOURCE_ENCODING} ${COMPILATION_OPTS} \
+   -cp ".${FS}$LIB_TEST${FS}$LIB_CUCUMBER_TEST${FS}${EXTERNAL_JARS}" \
+   -d $TEST_CLASSES @$TARGET/sources.lst @$TARGET/test-sources.lst
   echo "execute tests through JUnit"
-  java $JAR_OPTS -jar $LIB_TEST --cp "${EXTERNAL_JARS}${FS}${CLASSES}${FS}${TEST_CLASSES}${FS}." --scan-class-path
-  echo -e "   |_ ${GREEN}done$NC"
+  echo "--"
+  echo "java $JAR_OPTS -jar \"${LIB_TEST}\" -cp \"${LIB_CUCUMBER_TEST}${FS}${EXTERNAL_JARS}${FS}${CLASSES}${FS}${TEST_CLASSES}${FS}${FS}.\" --scan-class-path"
+  echo "--"
+  echo "execute Cucumber tests"
+  java $JAR_OPTS -jar "${LIB_CUCUMBER_CORE}" \
+     -cp "${LIB_CUCUMBER_TEST}${FS}${EXTERNAL_JARS}${FS}${CLASSES}${FS}${TEST_CLASSES}${FS}${FS}." \
+     --scan-class-path
   echo "- execute tests through JUnit $SRC/test." >>target/build.log
 
   ## TODO Integrate Cucumber tests execution
-  ## e.g. 'java -cp "path/to/cucumber-core.jar:path/to/cucumber-java.jar:path/to/cucumber-junit.jar:path/to/other/dependencies/*:path/to/your/classes" cucumber.api.cli.Main --glue com.your.step.definitions path/to/your/features'
+  ##java -cp "path/to/cucumber-core.jar:path/to/cucumber-java.jar:path/to/cucumber-junit.jar:path/to/other/dependencies/*:path/to/your/classes" cucumber.api.cli.Main --glue com.your.step.definitions path/to/your/features
+
 }
 #
 function createJar() {
