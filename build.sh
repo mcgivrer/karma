@@ -226,6 +226,9 @@ function executeTests() {
   java $JAR_OPTS -jar $LIB_TEST --cp "${EXTERNAL_JARS}${FS}${CLASSES}${FS}${TEST_CLASSES}${FS}." --scan-class-path
   echo -e "   |_ ${GREEN}done$NC"
   echo "- execute tests through JUnit $SRC/test." >>target/build.log
+
+  ## TODO Integrate Cucumber tests execution
+  ## e.g. 'java -cp "path/to/cucumber-core.jar:path/to/cucumber-java.jar:path/to/cucumber-junit.jar:path/to/other/dependencies/*:path/to/your/classes" cucumber.api.cli.Main --glue com.your.step.definitions path/to/your/features'
 }
 #
 function createJar() {
