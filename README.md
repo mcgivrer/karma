@@ -2,7 +2,7 @@
 
 ## Context
 
-This is the readme file for **Karma (1.0.0)** project.
+This is the readme file for **Karma (1.0.4)** project.
 A game oriented java project proposing basic implementation for
 
 - `Entity` as game objects,

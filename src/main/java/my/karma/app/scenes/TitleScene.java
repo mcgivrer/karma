@@ -1,12 +1,11 @@
 package my.karma.app.scenes;
 
-import my.karma.app.AbstractScene;
 import my.karma.app.KarmaPlatform;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
 
-public class TitleScene extends AbstractScene {
+public class TitleScene extends KarmaPlatform.AbstractScene {
     public TitleScene(KarmaPlatform app) {
         super(app);
     }
@@ -51,5 +50,10 @@ public class TitleScene extends AbstractScene {
         if (app.isKeyPressed(KeyEvent.VK_ENTER) || app.isKeyPressed(KeyEvent.VK_SPACE)) {
             app.getSceneManager().activate("play");
         }
+    }
+
+    @Override
+    public String getName() {
+        return "title";
     }
 }
