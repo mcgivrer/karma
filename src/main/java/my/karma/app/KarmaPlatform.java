@@ -568,7 +568,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             return (T) attributes.get(attrName);
         }
 
-        public <T> T getAttributeOrDefault(String attrName, T defaultValue) {
+        public <T> T getAttribute(String attrName, T defaultValue) {
             return (T) attributes.getOrDefault(attrName, defaultValue);
         }
 

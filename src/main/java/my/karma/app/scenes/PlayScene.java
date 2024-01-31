@@ -31,7 +31,7 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
       new KarmaPlatform.Disturbance("wind")
         .setPosition(0, 0)
         .setSize(w.getPlayArea().getWidth(), w.getPlayArea().getHeight() * 0.8)
-        .addForce(new KarmaPlatform.Vector2D(0.002, 0.0))
+        .addForce(new KarmaPlatform.Vector2D(0.0002, 0.0))
     );
     w.addDisturbance((KarmaPlatform.Disturbance)
       new KarmaPlatform.Disturbance("mag")
@@ -232,7 +232,7 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
               if (ce.getSrc().getAttribute("energy") != null && ce.getDst().name.startsWith("player")) {
                 double energy = ce.getSrc().getAttribute("energy");
                 // retrieve hit power from dst Entity if exists, else set 1
-                double hit = ce.getDst().getAttributeOrDefault("hit", 0.1);
+                double hit = ce.getDst().getAttribute("hit", 0.1);
                 // compute new energy for src Entity.
                 energy -= hit;
                 if (energy < 10) {
