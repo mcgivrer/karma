@@ -1,6 +1,5 @@
 package my.karma.app.scenes;
 
-import my.karma.app.AbstractScene;
 import my.karma.app.KarmaPlatform;
 import my.karma.app.behaviors.PlayerInputBehavior;
 import my.karma.app.behaviors.StarFieldParticleBehavior;
@@ -12,7 +11,7 @@ import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PlayScene extends AbstractScene {
+public class PlayScene extends KarmaPlatform.AbstractScene {
 
     private int lives = 5;
     private int score = 0;
@@ -29,24 +28,21 @@ public class PlayScene extends AbstractScene {
     @Override
     public void create(KarmaPlatform app) {
         KarmaPlatform.World w = getWorld();
-        w.addPerturbation((KarmaPlatform.Disturbance)
+        w.addDisturbance((KarmaPlatform.Disturbance)
             new KarmaPlatform.Disturbance("wind")
                 .setPosition(0, 0)
                 .setSize(w.getPlayArea().getWidth(), w.getPlayArea().getHeight() * 0.8)
-                .addForce(new KarmaPlatform.Vector2D(0.002, 0.0))
+                .addForce(new KarmaPlatform.Vector2D(0.0002, 0.0))
+        );
+        w.addDisturbance((KarmaPlatform.Disturbance)
+            new KarmaPlatform.Disturbance("mag")
+                .setPosition(0, 0)
+                .setSize(w.getPlayArea().getWidth() * 0.15, w.getPlayArea().getHeight())
+                .setForegroundColor(new Color(0.7f, 0.6f, 0.0f, 0.5f))
+                .setBackgroundColor(new Color(0.7f, 0.6f, 0.0f, 0.5f))
+                .addForce(new KarmaPlatform.Vector2D(-0.002, -0.012))
         );
         createPlatforms(app);
-        
-        KarmaPlatform.Entity particleSystem = new KarmaPlatform.Entity("starfield")
-            .setPhysicType(KarmaPlatform.PhysicType.NONE)
-            .setPriority(-20)
-            .setPosition(0, 0)
-            .setStatic(true)
-            .setForegroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f))
-            .setBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f))
-            .setSize(app.getScreenSize().getWidth(), app.getScreenSize().getHeight())
-            .addBehavior(new StarFieldParticleBehavior());
-        addEntity(particleSystem);
 
         KarmaPlatform.Entity particleSystem = new KarmaPlatform.Entity("starfield")
             .setPhysicType(KarmaPlatform.PhysicType.NONE)
@@ -337,6 +333,11 @@ public class PlayScene extends AbstractScene {
             case KeyEvent.VK_PAGE_DOWN -> removeEnemies(10);
             case KeyEvent.VK_DELETE -> removeEnemies(0);
         }
+    }
+    
+    @Override
+    public String getName() {
+        return "play";
     }
 
     private void removeEnemies(int nbEnemies) {

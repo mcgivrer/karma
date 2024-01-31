@@ -39,21 +39,23 @@ And add the `Disturbance` to the `World` class:
 ```java
 public static class World {
 
-        private Rectangle2D playArea;
-        private double gravity;
-        //<1>
-        private final List<Disturbance> disturbances = new ArrayList<>();
-        //...
-        //<2>
-        public World addPerturbation(Disturbance p) {
-            disturbances.add(p);
-            return this;
-        }
-        //<3>
-        public List<Disturbance> getDisturbances() {
-            return disturbances;
-        }
+    private Rectangle2D playArea;
+    private double gravity;
+    //<1>
+    private final List<Disturbance> disturbances = new ArrayList<>();
+
+    //...
+    //<2>
+    public World addPerturbation(Disturbance p) {
+        disturbances.add(p);
+        return this;
     }
+
+    //<3>
+    public List<Disturbance> getDisturbances() {
+        return disturbances;
+    }
+}
 ```
 
 1. Adding the list of `Disturbance`,
@@ -62,11 +64,11 @@ public static class World {
 
 ### Integrate Disturbance in the physic computation
 
-then, our `Entity` must be moving according to the new `Disturbance` from the `World`, we will modify 
+then, our `Entity` must be moving according to the new `Disturbance` from the `World`, we will modify
 the `KarmaPlatform#update()` :
 
 ```java
-public class KarmaPlatform{
+public class KarmaPlatform {
     //...
     public void update(double d) {
         //...
@@ -82,7 +84,7 @@ public class KarmaPlatform{
                     }
                 });
         //...
-        }
+    }
     //...
 }
 ```
@@ -98,28 +100,57 @@ private void applyWorldDisturbance(World world, Entity entity, double d) {
     }
 }
 ```
+
 So before computing physique for each entity, the intersecting/containing Disturbance force is applied on.
 
 ### Displaying for debug purpose
 
-Ok, by default wind is not visible (as soon as no feather are swiped away by), for debug purpose (and also for fun), we
+Ok, by default wind, magnetism or magic are not visible, so for debug purpose (and also for fun), we
 will add a way to display a transparent rectangle showing the wind area.
 
 ```java
-
+//...
+private void draw(Graphics2D g, Entity e) {
+    switch (e.getClass().getSimpleName()) {
+        //...
+        case "Disturbance" -> {
+            drawDisturbance(g, (Disturbance) e);
+        }
+    }
+    //...
+}
+//...
 ```
 
+And the specialized drawing method, only if debug level is set to a greater value than 3, will draw in a transparent way
+by default, a rectangle to show where in the play area, this `Disturbance` is applied to `Entity`.
 
+```java
+private void drawDisturbance(Graphics2D g, Disturbance e) {
+    if (isDebugGreaterThan(3)) {
+        if (Optional.ofNullable(e.getBackgroundColor()).isPresent()) {
+            g.setColor(e.getBackgroundColor());
+        } else {
+            g.setColor(new Color(0.0f, 0.0f, 0.6f, 0.3f));
+        }
+        g.fillRect((int) e.getPosition().getX(), (int) e.getPosition().getY(), (int) e.w, (int) e.h);
+    }
+}
+```
+
+> [!NOTE]
+> You can see that a default color is used if none are already defined. But you can define your own,
+> but remember, only visible inm debug mode._
 
 ## Wind simulation
 
-To simulate a wind, it is nothing more than adding a force vector on all entity crossing a specific area in the play 
+To simulate a wind, it is nothing more than adding a force vector on all entity crossing a specific area in the play
 area. we will first start by adding such thing to our demo.
 
 ```java
 import my.karma.app.AbstractScene;
 
-public class PlayScene extends AbstractScene{
+public class PlayScene extends AbstractScene {
     //...
     @Override
     public void create(KarmaPlatform app) {
@@ -131,17 +162,13 @@ public class PlayScene extends AbstractScene{
                         .addForce(new KarmaPlatform.Vector2D(0.002, 0.0))
         );
         //...
-    }    
+    }
     //...
 }
  ```
 
-Then running this new demo will drive all the Entity contained or intersecting by this Disturbance to be moved 
+Then running this new demo will drive all the Entity contained or intersecting by this Disturbance to be moved
 thanks to the added force. You will see all the generated objects moving to the right.
-
-adding some debug
-
-
 
 ## Water simulation target
 
