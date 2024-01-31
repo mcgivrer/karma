@@ -36,6 +36,17 @@ public class PlayScene extends AbstractScene {
                 .addForce(new KarmaPlatform.Vector2D(0.002, 0.0))
         );
         createPlatforms(app);
+        
+        KarmaPlatform.Entity particleSystem = new KarmaPlatform.Entity("starfield")
+            .setPhysicType(KarmaPlatform.PhysicType.NONE)
+            .setPriority(-20)
+            .setPosition(0, 0)
+            .setStatic(true)
+            .setForegroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f))
+            .setBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f))
+            .setSize(app.getScreenSize().getWidth(), app.getScreenSize().getHeight())
+            .addBehavior(new StarFieldParticleBehavior());
+        addEntity(particleSystem);
 
         KarmaPlatform.Entity particleSystem = new KarmaPlatform.Entity("starfield")
             .setPhysicType(KarmaPlatform.PhysicType.NONE)
