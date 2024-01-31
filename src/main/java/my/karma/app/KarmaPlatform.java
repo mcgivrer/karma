@@ -249,7 +249,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
          * internal entity counters to feed the id.
          */
         private static long index = 0;
-        long id = index++;
+        public long id = index++;
         public String name;
 
         /*---- Geometric attributes ----*/
@@ -1158,6 +1158,18 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         }
     }
 
+    /**
+     * the {@link ParticleBehavior} is used to create and animate particles which is an {@link KarmaPlatform.Entity} having such behavior
+     * and a bunch of child {@link KarmaPlatform.Entity} to me managed by the {@link ParticleBehavior} implementation.
+     *
+     * @param <Entity> the parent Entity to act as a particle system and its child entities being the particles.
+     */
+    public interface ParticleBehavior<Entity> extends Behavior<Entity> {
+        default void onCreate(KarmaPlatform a, Entity e) {
+
+        }
+    }
+
     public static class Camera extends Entity {
         private Entity target;
 
@@ -1394,11 +1406,18 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                     applyPhysics(world, e, d);
                     // detect collision and apply response
                     detectCollision(world, e, d);
-                    // update the entity (lifetime and active status)
-                    e.update(d);
-                    // update the bounding box for that entity
-                    e.updateBox();
                 }
+                // update the entity (lifetime and active status)
+                e.update(d);
+                // apply possible behavior#update
+                if (!e.getBehaviors().isEmpty()) {
+                    e.getBehaviors().forEach(b -> {
+                        b.onUpdate(this, e, d);
+                        e.updateBox();
+                    });
+                }
+                // update the bounding box for that entity
+                e.updateBox();
             });
         sceneManager.getCurrent().update(this, d);
         Camera cam = sceneManager.getCurrent().getCamera();
@@ -1435,13 +1454,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
             // Update the bounding box.
             entity.updateBox();
-            // apply possible behavior#update
-            if (!entity.getBehaviors().isEmpty()) {
-                entity.getBehaviors().forEach(b -> {
-                    b.onUpdate(this, entity, d);
-                    entity.updateBox();
-                });
-            }
+
             // keep entity in the KarmaApp area
             keepInPlayArea(world, entity);
             // update the box for the entity.
@@ -1814,7 +1827,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             0, 0, buffer.getWidth(), buffer.getHeight(),
             null);
 
-        if (isDebugGreaterThan(1)) {
+        if (isDebugGreaterThan(0)) {
             displayDebugLineOnScreen(gs, entities);
         }
 
@@ -1878,7 +1891,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             });
         }
         // drawing some debug information.
-        if (isDebugGreaterThan(1)) {
+        if (isDebugGreaterThan(1) && debugFilter.contains(e.name)) {
             g.setColor(Color.ORANGE);
             g.setFont(g.getFont().deriveFont(9.0f));
             g.drawString("#" + e.id + "=" + e.name, (int) e.getPosition().getX() - 2, (int) e.getPosition().getY() - 2);
