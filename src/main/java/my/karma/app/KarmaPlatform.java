@@ -147,6 +147,9 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
         @Override
         public boolean equals(Object obj) {
+            if (Optional.ofNullable(obj).isEmpty() || !obj.getClass().equals(Vector2D.class)) {
+                return false;
+            }
             Vector2D vObj = (Vector2D) obj;
             return x == vObj.x && y == vObj.y;
         }
@@ -378,13 +381,11 @@ public class KarmaPlatform extends JPanel implements KeyListener {
          * Add a new {@link CollisionEvent} to the {@link Entity}.
          *
          * @param ce the new {@link CollisionEvent} to be linked to this {@link Entity}.
-         * @return this updated Entity (thanks to fluent API).
          */
-        public Entity register(CollisionEvent ce) {
+        public void register(CollisionEvent ce) {
             if (!collisions.contains(ce)) {
                 collisions.add(ce);
             }
-            return this;
         }
 
         public Collection<CollisionEvent> getCollisions() {
@@ -404,7 +405,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
          * previous call to set its new life and define status for active attribute.
          * update all the child {@link Entity}'s.
          *
-         * @param d
+         * @param d the elapsed time since previous call.
          */
         public void update(double d) {
             updateBox();
@@ -716,6 +717,9 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             objects = new ArrayList<>();
             setRect(pBounds);
             nodes = new SpacePartition[4];
+            if (Optional.ofNullable(this.root).isEmpty()) {
+                this.root = this;
+            }
         }
 
         /**
@@ -832,7 +836,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                     }
                 }
             }
-            // insert all children Entity
+            // insert all children entities
             pRect.getChild().forEach(this::insert);
         }
 
@@ -1387,7 +1391,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         public boolean equals(Object obj) {
             CollisionEvent other = (CollisionEvent) obj;
             return (other.getDst().equals(this.getDst()) && this.getSrc().equals(other.getSrc()))
-                    || (this.getSrc().equals(other.getDst()) && this.getDst().equals(other.getSrc()));
+                || (this.getSrc().equals(other.getDst()) && this.getDst().equals(other.getSrc()));
         }
     }
 
@@ -1547,16 +1551,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             .forEach(e -> {
                 if (!e.getPhysicType().equals(PhysicType.NONE)) {
 
-                    // if concerned, apply World disturbances.
-                    applyWorldDisturbance(world, e, d);
-                    // compute physic on the Entity (velocity & position)
-                    applyPhysics(world, e, d);
-                    // detect collision and apply response
-                    detectCollision(world, e, d);
-                    // update the entity (lifetime and active status)
-                    e.update(d);
-                    // update the bounding box for that entity
-                    e.updateBox();
+                    updateEntity(d, e);
                 }
             });
         sceneManager.getCurrent().update(this, d);
@@ -1564,6 +1559,19 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         if (Optional.ofNullable(cam).isPresent()) {
             cam.update(d);
         }
+    }
+
+    public void updateEntity(double d, Entity e) {
+        // if concerned, apply World disturbances.
+        applyWorldDisturbance(world, e, d);
+        // compute physic on the Entity (velocity & position)
+        applyPhysics(world, e, d);
+        // detect collision and apply response
+        detectCollision(world, e, d);
+        // update the entity (lifetime and active status)
+        e.update(d);
+        // update the bounding box for that entity
+        e.updateBox();
     }
 
     /**
@@ -1588,14 +1596,14 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
             // compute acceleration for this Entity
             entity.acceleration = entity.acceleration
-                    .addAll(entity.forces)
-                    .limit(world.getAccelerationMax());
+                .addAll(entity.forces)
+                .limit(world.getAccelerationMax());
 
             // Compute velocity based on acceleration of this Entity
             entity.velocity = entity.velocity
-                    .add(world.getGravity().multiply(-0.01))
-                    .add(entity.acceleration.multiply(d))
-                    .limit(world.getVelocityMax());
+                .add(world.getGravity().multiply(-0.01))
+                .add(entity.acceleration.multiply(d))
+                .limit(world.getVelocityMax());
 
             // Compute position according to velocity
             entity.position = entity.position.add(entity.getVelocity().multiply(d));
@@ -2026,15 +2034,15 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         gs.fillRect(8, winSize.height + 8, winSize.width, 32);
         gs.setColor(Color.ORANGE);
         gs.drawString(
-                String.format("[ debug: %d | fps:%03d | entity(sta:%d,dyn:%d,non:%d) | active:%d | collision:%d ]",
-                        debug,
-                        (Integer) stats.getOrDefault("frameRate", 0.0),
-                        countStaticEntities,
-                        countDynamicEntities,
-                        countNoneEntities,
-                        countActiveEntities,
-                        collidingEventsCount),
-                16, winSize.height + 24);
+            String.format("[ debug: %d | fps:%03d | entity(sta:%d,dyn:%d,non:%d) | active:%d | collision:%d ]",
+                debug,
+                (Integer) stats.getOrDefault("frameRate", 0.0),
+                countStaticEntities,
+                countDynamicEntities,
+                countNoneEntities,
+                countActiveEntities,
+                collidingEventsCount),
+            16, winSize.height + 24);
     }
 
     /**
@@ -2081,20 +2089,20 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         g.setColor(Color.CYAN);
         Vector2D pos1 = e.getPosition().add(e.getVelocity().multiply(100.0).add(new Vector2D(e.w, e.h).multiply(0.5)));
         g.drawLine(
-                (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
-                (int) pos1.getX(), (int) pos1.getY());
+            (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
+            (int) pos1.getX(), (int) pos1.getY());
         if (isDebugGreaterThan(3)) {
             // draw collision normals
             g.setColor(Color.WHITE);
             e.getCollisions().forEach(ce -> {
                 Vector2D pos2 = ce.getSrc().getPosition()
-                        .add(ce.getNormal()
-                                .multiply(10.0)
-                                .add(new Vector2D(e.w, e.h)
-                                        .multiply(0.5)));
+                    .add(ce.getNormal()
+                        .multiply(10.0)
+                        .add(new Vector2D(e.w, e.h)
+                            .multiply(0.5)));
                 g.drawLine(
-                        (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
-                        (int) pos2.getX(), (int) pos2.getY());
+                    (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
+                    (int) pos2.getX(), (int) pos2.getY());
             });
         }
         g.setStroke(new BasicStroke(1.0f));
