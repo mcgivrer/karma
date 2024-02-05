@@ -1061,9 +1061,11 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
         private final Map<String, KarmaPlatform.Entity> entities = new ConcurrentHashMap<>();
         private final KarmaPlatform.World world;
+        protected final KarmaPlatform app;
         private KarmaPlatform.Camera camera;
 
         public AbstractScene(KarmaPlatform app) {
+            this.app = app;
             this.world = app.getWorld();
         }
 
@@ -1290,6 +1292,14 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         default void onCollision(CollisionEvent ce) {
 
         }
+
+        default void onCollisionIn(CollisionEvent ce) {
+
+        }
+
+        default void onCollisionOut(CollisionEvent ce) {
+
+        }
     }
 
     /**
@@ -1342,15 +1352,17 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         }
 
         public void update(double dt) {
-            this.position.x += Math
-                .ceil((target.position.x + (target.w * 0.5) - ((viewport.getWidth()) * 0.5) - this.position.x)
-                    * tween * Math.min(dt, 10));
-            this.position.y += Math
-                .ceil((target.position.y + (target.h * 0.5) - ((viewport.getHeight()) * 0.5) - this.position.y)
-                    * tween * Math.min(dt, 10));
+            if (Optional.ofNullable(target).isPresent()) {
+                this.position.x += Math
+                    .ceil((target.position.x + (target.w * 0.5) - ((viewport.getWidth()) * 0.5) - this.position.x)
+                        * tween * Math.min(dt, 10));
+                this.position.y += Math
+                    .ceil((target.position.y + (target.h * 0.5) - ((viewport.getHeight()) * 0.5) - this.position.y)
+                        * tween * Math.min(dt, 10));
 
-            this.viewport.setRect(this.position.x, this.position.y, this.viewport.getWidth(),
-                this.viewport.getHeight());
+                this.viewport.setRect(this.position.x, this.position.y, this.viewport.getWidth(),
+                    this.viewport.getHeight());
+            }
         }
     }
 

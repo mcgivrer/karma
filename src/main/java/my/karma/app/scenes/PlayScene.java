@@ -1,15 +1,16 @@
 package my.karma.app.scenes;
 
 import my.karma.app.KarmaPlatform;
-import my.karma.app.behaviors.PlayerInputBehavior;
-import my.karma.app.behaviors.StarFieldParticleBehavior;
+import my.karma.app.behaviors.*;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+
+import static my.karma.app.KarmaPlatform.getSoundManager;
 
 public class PlayScene extends KarmaPlatform.AbstractScene {
 
@@ -80,7 +81,7 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         cam.setTarget(p);
 
         // Add some enemies.
-        generateNRJBalls(20);
+        generateNRJBalls("ball_", 20);
 
         // Create HUD
         createHUD(app);
@@ -217,11 +218,11 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         addEntity(go);
     }
 
-    private void generateNRJBalls(int nbBalls) {
+    private void generateNRJBalls(String entityRootName, int nbBalls) {
         KarmaPlatform.Material ballMat = new KarmaPlatform.Material("BALL_MAT", 1.0, 1.0, 0.99);
         for (int i = 0; i < nbBalls; i++) {
             addEntity(
-                new KarmaPlatform.Entity("ball_" + i)
+                new KarmaPlatform.Entity(entityRootName + "_" + i)
                     .setPosition(
                         32 + (Math.random() * (getWorld().getPlayArea().getWidth() - 64)),
                         32 + (Math.random() * (getWorld().getPlayArea().getHeight() - 64)))
@@ -237,52 +238,9 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
                     .setMaterial(ballMat)
                     .setMass(5.0)
                     .setAttribute("energy", 20.0)
-                    .addBehavior(new KarmaPlatform.Behavior<>() {
-                        @Override
-                        public void onCollision(KarmaPlatform.CollisionEvent ce) {
-                            // get src Entity energy
-                            if (ce.getSrc().getAttribute("energy") != null && ce.getDst().name.startsWith("player")) {
-                                double energy = ce.getSrc().getAttribute("energy");
-                                // retrieve hit power from dst Entity if exists, else set 1
-                                double hit = ce.getDst().getAttributeOrDefault("hit", 0.1);
-                                // compute new energy for src Entity.
-                                energy -= hit;
-                                if (energy < 10) {
-                                    ce.getSrc().setForegroundColor(Color.RED);
-                                    ce.getSrc().setBackgroundColor(Color.ORANGE);
-                                }
-                                if (energy <= 0) {
-                                    ce.getSrc().setActive(false);
-                                    score += 10;
-                                }
-                                ce.getSrc().setAttribute("energy", energy);
-                                // play the "click" corresponding sound.
-                                KarmaPlatform.getSoundManager().playSound("click");
-                            }
-                        }
-                    }).addBehavior(new KarmaPlatform.Behavior<KarmaPlatform.Entity>() {
-                        @Override
-                        public void onUpdate(KarmaPlatform a, KarmaPlatform.Entity e, double d) {
-                            KarmaPlatform.Entity player = getEntity("player");
-                            if (player.getCenter().getDistance(e.getCenter()) < 50.0) {
-                                KarmaPlatform.Vector2D v = player.getVelocity().subtract(e.getPosition());
-                                e.setVelocity(v.multiply(-0.0001));
-                            }
-                        }
-
-                        @Override
-                        public void onDraw(KarmaPlatform a, Graphics2D g, KarmaPlatform.Entity e) {
-                            if (KarmaPlatform.isDebugGreaterThan(3)) {
-                                g.setColor(Color.YELLOW);
-                                g.setStroke(new BasicStroke(0.05f));
-                                g.draw(
-                                    new Ellipse2D.Double(
-                                        (int) e.getCenter().x - e.w, (int) e.getCenter().y - e.h,
-                                        (int) 50.0, (int) 50.0));
-                            }
-
-                        }
-                    }));
+                    .addBehavior(new BallOnCollisionBehavior(app))
+                    .addBehavior(new PlaySoundOnCollisionBehavior(app, "toc"))
+                    .addBehavior(new BallTrackingBehavior(app, 50.0)));
         }
     }
 
@@ -290,35 +248,40 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
     public void initialize(KarmaPlatform app) {
         score = 0;
         lives = 5;
-        app.getSoundManager().loadSound("click", "/res/sounds/clic.wav");
-        app.getSoundManager().loadSound("toc", "/res/sounds/toc.wav");
-        app.getSoundManager().loadSound("tic", "/res/sounds/tic.wav");
+        getSoundManager().loadSound("click", "/res/sounds/clic.wav");
+        getSoundManager().loadSound("toc", "/res/sounds/toc.wav");
+        getSoundManager().loadSound("tic", "/res/sounds/tic.wav");
     }
 
     @Override
     public void update(KarmaPlatform app, double d) {
-        ((KarmaPlatform.TextObject) getEntity("lives")).setValue(lives);
-        ((KarmaPlatform.TextObject) getEntity("score")).setValue(score);
+        if (getEntities().contains("lives") && getEntities().contains("score")) {
+            ((KarmaPlatform.TextObject) getEntity("lives")).setValue(lives);
+            ((KarmaPlatform.TextObject) getEntity("score")).setValue(score);
+        }
     }
 
     @Override
     public void draw(KarmaPlatform app, Graphics2D g) {
+        //  retrieve some specific attributes from the player like energy and mana.
+        Optional<KarmaPlatform.Entity> playerOption = Optional.ofNullable(getEntity("player"));
+        if (playerOption.isPresent()) {
+            KarmaPlatform.Entity player = playerOption.get();
+            g.setStroke(new BasicStroke(1.0f));
+            double energy = player.getAttribute("energy");
+            drawGauge(g, Color.RED, app, app.getScreenSize().width - 80, 10, 40, 4, energy);
 
-        KarmaPlatform.Entity player = getEntity("player");
-        g.setStroke(new BasicStroke(1.0f));
-        double energy = player.getAttribute("energy");
-        g.setColor(Color.RED);
-        g.fillRect(app.getScreenSize().width - 80, 10, (int) ((energy / 100.0) * 40.0), 4);
+            double mana = player.getAttribute("mana");
+            drawGauge(g, Color.BLUE, app, app.getScreenSize().width - 80, 16, 40, 4, mana);
+        }
+
+    }
+
+    private static void drawGauge(Graphics2D g, Color red, KarmaPlatform app, int x, int y, int w, int h, double value) {
+        g.setColor(red);
+        g.fillRect(x, y, (int) ((value / 100.0) * w), h);
         g.setColor(Color.BLACK);
-        g.drawRect(app.getScreenSize().width - 80, 10, (int) ((energy / 100.0) * 40.0), 4);
-
-        double mana = player.getAttribute("mana");
-        g.setColor(Color.BLUE);
-        g.fillRect(app.getScreenSize().width - 80, 16, (int) ((mana / 100.0) * 40.0), 4);
-        g.setColor(Color.BLACK);
-        g.drawRect(app.getScreenSize().width - 80, 16, (int) ((mana / 100.0) * 40.0), 4);
-
-
+        g.drawRect(x, y, (int) ((value / 100.0) * w), h);
     }
 
     @Override
@@ -326,18 +289,22 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         switch (ke.getKeyCode()) {
             case KeyEvent.VK_R -> {
                 if (ke.isControlDown()) {
-                    getEntities().stream()
-                        .filter(entity -> entity.isActive() && entity.name.startsWith("enemy_"))
-                        .forEach(entity -> entity.setVelocity(
-                            new KarmaPlatform.Vector2D(
-                                Math.random() * 5.0,
-                                Math.random() * 5.0)));
+                    randomDispatchBall("ball_");
                 }
             }
-            case KeyEvent.VK_PAGE_UP -> generateNRJBalls(10);
-            case KeyEvent.VK_PAGE_DOWN -> removeEnemies(10);
-            case KeyEvent.VK_DELETE -> removeEnemies(0);
+            case KeyEvent.VK_PAGE_UP -> generateNRJBalls("ball_", 10);
+            case KeyEvent.VK_PAGE_DOWN -> removeEnemies("ball_", 10);
+            case KeyEvent.VK_DELETE -> removeEnemies("ball_", 0);
         }
+    }
+
+    private void randomDispatchBall(String filteredName) {
+        getEntities().stream()
+            .filter(entity -> entity.isActive() && entity.name.startsWith(filteredName))
+            .forEach(entity -> entity.setVelocity(
+                new KarmaPlatform.Vector2D(
+                    Math.random() * 5.0,
+                    Math.random() * 5.0)));
     }
 
     @Override
@@ -345,8 +312,10 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         return "play";
     }
 
-    private void removeEnemies(int nbEnemies) {
-        List<KarmaPlatform.Entity> entitiesToDelete = getEntities().stream().filter(e -> e.name.startsWith("enemy_")).toList();
+    private void removeEnemies(String filteredName, int nbEnemies) {
+        List<KarmaPlatform.Entity> entitiesToDelete = getEntities().stream()
+            .filter(e -> e.name.startsWith(filteredName))
+            .toList();
         if (nbEnemies == 0) {
             entitiesToDelete.forEach(e -> getEntities().remove(e));
         } else {
