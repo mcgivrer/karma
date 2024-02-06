@@ -147,6 +147,9 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
         @Override
         public boolean equals(Object obj) {
+            if (Optional.ofNullable(obj).isEmpty() || !obj.getClass().equals(Vector2D.class)) {
+                return false;
+            }
             Vector2D vObj = (Vector2D) obj;
             return x == vObj.x && y == vObj.y;
         }
@@ -378,13 +381,11 @@ public class KarmaPlatform extends JPanel implements KeyListener {
          * Add a new {@link CollisionEvent} to the {@link Entity}.
          *
          * @param ce the new {@link CollisionEvent} to be linked to this {@link Entity}.
-         * @return this updated Entity (thanks to fluent API).
          */
-        public Entity register(CollisionEvent ce) {
+        public void register(CollisionEvent ce) {
             if (!collisions.contains(ce)) {
                 collisions.add(ce);
             }
-            return this;
         }
 
         public Collection<CollisionEvent> getCollisions() {
@@ -404,7 +405,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
          * previous call to set its new life and define status for active attribute.
          * update all the child {@link Entity}'s.
          *
-         * @param d
+         * @param d the elapsed time since previous call.
          */
         public void update(double d) {
             updateBox();
@@ -720,6 +721,9 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             objects = new ArrayList<>();
             setRect(pBounds);
             nodes = new SpacePartition[4];
+            if (Optional.ofNullable(this.root).isEmpty()) {
+                this.root = this;
+            }
         }
 
         /**
@@ -836,7 +840,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                     }
                 }
             }
-            // insert all children Entity
+            // insert all children entities
             pRect.getChild().forEach(this::insert);
         }
 
@@ -1563,12 +1567,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             .forEach(e -> {
                 if (!e.getPhysicType().equals(PhysicType.NONE)) {
 
-                    // if concerned, apply World disturbances.
-                    applyWorldDisturbance(world, e, d);
-                    // compute physic on the Entity (velocity & position)
-                    applyPhysics(world, e, d);
-                    // detect collision and apply response
-                    detectCollision(world, e, d);
+                    updateEntity(d, e);
                 }
                 // update the entity (lifetime and active status)
                 e.update(d);
@@ -1587,6 +1586,19 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         if (Optional.ofNullable(cam).isPresent()) {
             cam.update(d);
         }
+    }
+
+    public void updateEntity(double d, Entity e) {
+        // if concerned, apply World disturbances.
+        applyWorldDisturbance(world, e, d);
+        // compute physic on the Entity (velocity & position)
+        applyPhysics(world, e, d);
+        // detect collision and apply response
+        detectCollision(world, e, d);
+        // update the entity (lifetime and active status)
+        e.update(d);
+        // update the bounding box for that entity
+        e.updateBox();
     }
 
     /**
