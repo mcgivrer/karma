@@ -45,16 +45,6 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         );
         createPlatforms(app);
 
-        KarmaPlatform.Entity particleSystem = new KarmaPlatform.Entity("starfield")
-            .setPhysicType(KarmaPlatform.PhysicType.NONE)
-            .setPriority(-20)
-            .setPosition(0, 0)
-            .setStatic(true)
-            .setForegroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f))
-            .setBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f))
-            .setSize(app.getScreenSize().getWidth(), app.getScreenSize().getHeight())
-            .addBehavior(new StarFieldParticleBehavior());
-        addEntity(particleSystem);
 
         // Add camera
         KarmaPlatform.Camera cam = new KarmaPlatform.Camera("camera_01")
@@ -63,7 +53,7 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         setCamera(cam);
         KarmaPlatform.Material playerMat = new KarmaPlatform.Material("PLAYER_MAT", 0.98, 1.0, 0.25);
         // Add a player.
-        KarmaPlatform.Entity p = new KarmaPlatform.Entity("player")
+        KarmaPlatform.Entity player = new KarmaPlatform.Entity("player")
             .setPosition(160, 30)
             .setPhysicType(KarmaPlatform.PhysicType.DYNAMIC)
             .setSize(16, 16)
@@ -77,11 +67,23 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
             .setAttribute("mana", 100.0)
             .setAttribute("hit", 1.0)
             .addBehavior(new PlayerInputBehavior());
-        addEntity(p);
-        cam.setTarget(p);
+        addEntity(player);
+        cam.setTarget(player);
+
+
+        KarmaPlatform.Entity particleSystem = new KarmaPlatform.Entity("starfield")
+            .setPhysicType(KarmaPlatform.PhysicType.NONE)
+            .setPriority(-20)
+            .setPosition(0, 0)
+            .setStatic(true)
+            .setForegroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f))
+            .setBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f))
+            .setSize(app.getScreenSize().getWidth(), app.getScreenSize().getHeight())
+            .addBehavior(new StarFieldParticleBehavior(player, 0.0005, 50, 30));
+        addEntity(particleSystem);
 
         // Add some enemies.
-        generateNRJBalls("ball_", 20);
+        generateNRJBalls(20);
 
         // Create HUD
         createHUD(app);
