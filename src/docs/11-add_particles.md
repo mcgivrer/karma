@@ -15,7 +15,7 @@ Basically, the particle is created, lives a certain period of time, and then dis
 In our Entity, we already have the base mechanism to manage the period of time the entity is active:
 the duration attribute.
 
-To be able to create a particle from an Entity, we are just missing a specific `Bheavior.onCreate()` to define the
+To be able to create a particle from an Entity, we are just missing a specific `Behavior.onCreate()` to define the
 right operation to create a new particle in the system.
 
 ## The ParticleBehavior interface
@@ -27,27 +27,48 @@ As described before, we are missing the onCreate API, so here it is :
 alt="UML class diagram showing the Behavior and ParticleBehavior inheritance" title="ParticleBehavior interface inheriting from the Behavior"/>
 <figcaption>figure 11.1 - The <code>ParticleBehavior</code> interface inheriting from the <code>Behavior</code> already existing interface</figcaption></figure>
 
-
 Here is the possible interface definition:
 
 ```java
     public interface ParticleBehavior<Entity> extends Behavior<Entity> {
     default void onCreate(KarmaPlatform a, Entity e) {
-
     }
 }
 ```
 
-It is time for a simple first implementation: a background starfield.
-
+It is time for a simple first implementation: a background star field.
 
 ## A star field particle system
 
 What is a star field?
 
-A star field is a bunch of stars in a dynamic sky, moving accordingly to the opposite of the Camera moves, 
+A star field is a bunch of stars in a dynamic sky, moving accordingly to the opposite of the Camera moves,
 on some multiple parallax.
+
+Those parallax will be some computation based on the priority of each child Entity multiplied by a specific factor.
+
+The `StarFieldParticleBehavior` is the implementation for the Star animation.
+
+```java
+public class StarFieldParticleBehavior implements KarmaPlatform.ParticleBehavior<KarmaPlatform.Entity> {
+    private int nbStars;
+    private KarmaPlatform.Entity focusEntity;
+    private double speedRatio;
+    private double starSpread;
+}
+```
+
+The class contains the following attributes :
+
+- `nbStars` the number of stars to be displayed on the play area,
+- `focusEntity` is the `Entity` focused as a target of the star field movement,
+- `speedRatio` the ratio to be applied on the target velocity, 
+- `starSpread` 
+
 
 !! TODO add a diagram there
 
-
+<figure>
+<img src="illustrations/08-add_particles-01.png" alt="a screenshot of the main PlayScene integrating some star field" title="Some stars in the background"/>
+<figCaption>figure 11.2 - Some stars in the background</figCaption>
+</figure>
