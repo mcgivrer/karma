@@ -28,12 +28,12 @@ jobs:
          #/root/.sdkman/candidates/maven/current/mvn -B package -DskipTests=true --file pom.xml
          chmod +x ./build.sh
          ./build.sh a
-      - uses: https://gitea.com/actions/release-action@main
-        with:
-          files: |-
-            target/*.jar
-            target/buid/*.run
-          api_key: "${{secrets.RELEASE_TOKEN}}"
+ #     - uses: https://gitea.com/actions/release-action@main
+ #       with:
+ #         files: |-
+ #           target/*.jar
+ #           target/buid/*.run
+#          api_key: "${{secrets.RELEASE_TOKEN}}"
 # use of upload artifacts : https://github.com/actions/upload-artifact
 #      - uses: actions/upload-artifact@v3
 #        with:
