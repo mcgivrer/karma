@@ -1516,7 +1516,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         }
     }
 
-    /**
+    /**0
      * Initialization of the Application by parsing the CLI arguments.
      *
      * @param args list of command line arguments.
