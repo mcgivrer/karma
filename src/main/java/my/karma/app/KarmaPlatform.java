@@ -50,6 +50,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      * Entity type for rendering purpose.
      */
     public enum EntityType {
+        NONE,
         RECTANGLE,
         ELLIPSE,
         IMAGE

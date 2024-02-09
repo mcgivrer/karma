@@ -70,12 +70,21 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         cam.setTarget(p);
 
         // Add water
-        KarmaPlatform.Entity water = new KarmaPlatform.Entity("water")
-            .setPriority(2)
-            .setPosition(0, getWorld().getPlayArea().getHeight() * 0.75)
-            .setSize(app.getScreenSize().getWidth(), app.getScreenSize().getHeight() * 0.25)
-            .addBehavior(new WaterSimulationBehavior(0.05, 0.25, getWorld()));
-        addEntity(water);
+        KarmaPlatform.Disturbance water = (KarmaPlatform.Disturbance)
+            new KarmaPlatform.Disturbance("water")
+                .setPriority(10)
+                .setType(KarmaPlatform.EntityType.NONE)
+                .setPhysicType(KarmaPlatform.PhysicType.STATIC)
+                .setMaterial(
+                    new KarmaPlatform.Material(
+                        "water",
+                        0.98, 1.0, 0.2))
+                .setPosition(16, (w.getPlayArea().getHeight() * 0.75) - 16)
+                .setForegroundColor(new Color(0.0f, 0.0f, 0.8f, 0.5f))
+                .setBackgroundColor(new Color(0.0f, 0.0f, 0.6f, 0.5f))
+                .setSize(w.getPlayArea().getWidth() - 32, (w.getPlayArea().getHeight() * 0.25) - 16)
+                .addBehavior(new WaterSimulationBehavior(0.0125, 0.25, getWorld()));
+        w.addDisturbance(water);
 
 
         // Add some enemies.
@@ -261,7 +270,7 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
                         @Override
                         public void onUpdate(KarmaPlatform a, KarmaPlatform.Entity e, double d) {
                             KarmaPlatform.Entity player = getEntity("player");
-                            if (player.getCenter().getDistance(e.getCenter()) < 50.0) {
+                            if (player != null && player.getCenter().getDistance(e.getCenter()) < 50.0) {
                                 KarmaPlatform.Vector2D v = player.getVelocity().subtract(e.getPosition());
                                 e.setVelocity(v.multiply(-0.0001));
                             }
