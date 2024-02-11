@@ -83,7 +83,7 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         addEntity(particleSystem);
 
         // Add some enemies.
-        generateNRJBalls("ball_", 20);
+        generateNRJBalls("ball", 20);
 
         // Create HUD
         createHUD(app);
