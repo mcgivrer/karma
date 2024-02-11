@@ -14,46 +14,9 @@ A game oriented java project proposing basic implementation for
 
 The project is composed of one main class `KarmaPlatform` that contains subclasses.
 
-```plantuml
-@startuml
-!theme plain
-hide methods
-hide attributes
+![The UML class diagram](https://www.plantuml.com/plantuml/png/VL7BZXCn4BpxAqnEGIX8N7r0oug7I42ij2jnG1nwnZqp1Zz6xHv2XFRVySE2IOYuEEsgIhchvYOo42_EYYSyeKCvMp1UJ4QZTCXJqB5UW9bCjp168MRelyE8Sl_wy4j8QJmZ3T2ZFE3fWucC7kaCtz-1HoiUHMyXHda0Sd1dWOT0Jk9FHgzZTdjUXTAusQ93pnLTsURtdlM4m7ZV9s3xD0F6pmlNSPbruhPQsU37WcY2O-5snXlU0erHtJCPFtxvMc1juXmYLeqDOKxJeuXJE5visWgH0ltYv1lFXayFfnbRh0gqo-T0LhVv7HdzgVk6FRUm5zg7X5xd_rPuYnFyC85MK2cWMjJv8tWOaHhqgejCq7EXrfNM_ubpVlDY8tUxbtBZD-rnXVd7OBnG9b49fuxv_DSckIIJFmkhhWrHLD-ioIR_5IN1gc35kUMpZr6MlLs60GdrUvTogwxShiZa_Ys1GpNaymg_Ba_5TPDhfcGhqGfQXL686_HwSVOt "The full UML Diagram for the KarmaPlatform")
 
-class KarmaPlatform extends JPanel implements KeyListener{
-  +createScene()
-  +input()
-  +update(d:long)
-  +draw()
-  -init(args:String[])
-  -dispose()
-  -loop()
-}
-package JDK{
-}
-show KarmaPlatform methods 
-enum EntityType
-class Entity
-class World
-class GridObject extends Entity
-class TextObject extends Entity
-interface Behavior
-interface Scene
-class SceneManager
-class AbstractScene implements Scene
-
-AbstractScene "1" --> "n" Entity:entities
-AbstractScene -> World:world
-AbstractScene "1"-->"n" Behavior:behaviors
-Entity "1" -> "n" Behavior:behaviors
-Entity -> EntityType:type
-KarmaPlatform --> BufferedImage:buffer
-KarmaPlatform -->  JFrame:frame
-KarmaPlatform --> SceneManager:sceneManager
-SceneManager "1"->"n" Scene:scenes
-
-@enduml
-```
+_figure 1 - The full UML Diagram for the KarmaPlatform_
 
 ## Build
 
@@ -85,7 +48,8 @@ target/build/Karma-1.0.0.run
 
 ## Contribute
 
-You can change the source code freely and add/or new build dependencies through the `build/properties` file, see the [build.readme.md](./build.readme.md) file for details.
+You can change the source code freely and add/or new build dependencies through the `build/properties` file, see
+the [build.readme.md](./build.readme.md) file for details.
 
 Enjoy !
 
