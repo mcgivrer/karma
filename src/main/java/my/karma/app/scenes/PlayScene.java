@@ -70,18 +70,6 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         addEntity(player);
         cam.setTarget(player);
 
-
-        KarmaPlatform.Entity particleSystem = new KarmaPlatform.Entity("starfield")
-                .setPhysicType(KarmaPlatform.PhysicType.NONE)
-                .setPriority(-20)
-                .setPosition(0, 0)
-                .setStatic(true)
-                .setForegroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f))
-                .setBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f))
-                .setSize(app.getScreenSize().getWidth(), app.getScreenSize().getHeight())
-                .addBehavior(new StarFieldParticleBehavior(player, 0.0005, 50, 30));
-        addEntity(particleSystem);
-
         // Add some enemies.
         generateNRJBalls("ball", 20);
 
@@ -187,7 +175,6 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
                 .setPhysicType(KarmaPlatform.PhysicType.NONE)
                 .setPriority(100)
                 .setStatic(true);
-
         addEntity(score);
 
         Font fl = app.getGraphics().getFont().deriveFont(Font.BOLD, 12.0f);
@@ -241,7 +228,7 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
                             .setMass(5.0)
                             .setAttribute("energy", 20.0)
                             .addBehavior(new BallOnCollisionBehavior(app))
-                            .addBehavior(new PlaySoundOnCollisionBehavior(app, "toc"))
+                            .addBehavior(new PlaySoundOnCollisionBehavior(app, "toc", "platform"))
                             .addBehavior(new BallTrackingBehavior(app, 50.0)));
         }
     }
@@ -257,7 +244,8 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
 
     @Override
     public void update(KarmaPlatform app, double d) {
-        if (getEntities().contains("lives") && getEntities().contains("score")) {
+        if (Optional.ofNullable(getEntity("lives")).isPresent()
+                && Optional.ofNullable(getEntity("score")).isPresent()) {
             ((KarmaPlatform.TextObject) getEntity("lives")).setValue(lives);
             ((KarmaPlatform.TextObject) getEntity("score")).setValue(score);
         }
@@ -291,7 +279,7 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         switch (ke.getKeyCode()) {
             case KeyEvent.VK_R -> {
                 if (ke.isControlDown()) {
-                    randomDispatchBall("ball_");
+                    randomMove("ball_", 5.0);
                 }
             }
             case KeyEvent.VK_PAGE_UP -> generateNRJBalls("ball_", 10);
@@ -300,13 +288,13 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         }
     }
 
-    private void randomDispatchBall(String filteredName) {
+    private void randomMove(String entityNamefiltering, double randomFactor) {
         getEntities().stream()
-                .filter(entity -> entity.isActive() && entity.name.startsWith(filteredName))
+                .filter(entity -> entity.isActive() && entity.name.startsWith(entityNamefiltering))
                 .forEach(entity -> entity.setVelocity(
                         new KarmaPlatform.Vector2D(
-                                Math.random() * 5.0,
-                                Math.random() * 5.0)));
+                                Math.random() * randomFactor,
+                                Math.random() * randomFactor)));
     }
 
     @Override
@@ -314,9 +302,9 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         return "play";
     }
 
-    private void removeEnemies(String filteredName, int nbEnemies) {
+    private void removeEnemies(String entityNamefiltering, int nbEnemies) {
         List<KarmaPlatform.Entity> entitiesToDelete = getEntities().stream()
-                .filter(e -> e.name.startsWith(filteredName))
+                .filter(e -> e.name.startsWith(entityNamefiltering))
                 .toList();
         if (nbEnemies == 0) {
             entitiesToDelete.forEach(e -> getEntities().remove(e));

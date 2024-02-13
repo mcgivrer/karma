@@ -14,46 +14,9 @@ A game oriented java project proposing basic implementation for
 
 The project is composed of one main class `KarmaPlatform` that contains subclasses.
 
-```plantuml
-@startuml
-!theme plain
-hide methods
-hide attributes
+![The UML class diagram](http://www.plantuml.com/plantuml/png/VL5DRzD04BtlhrXo2a91uhe7LAe28W5HgPKu80vZxyHUs0zhPao8KFyxwxLfRKVgnNxpvit7lBrY0P8-UFL2MWoeEmykgjPPr06bJPR704J8LRqWAzL1_GiQrFkRmr-bjOk2T8GQzG7FdnqBHgG5lx-5Y5uzgDe3ipu01RZr8CT4GUEVN61vwFPw56eNEey1eupihEqmxrLD289tTIQsBmV2nQwN4VQTpRcjDJx5fZ2Mu5HoEnUTR84QDdT2BZRVVnJQEkuIuwZnANKPFIXkqscrwMI8LXZxeDz7SNA-FtSudZKHK_0jaRSJ_aZEVgr-OYtJiIljVMQVozyubfugY3Mk1KyUNsCBlrsY6LKScdeK_0KYD4WJzQvY8QYbfEQUB-fI7-t_EhKisRpPwDtkhTx4pRIFmU7da5VAB2g6c5EnfU1IEZlDs2VCbvEoEizvFDDK4s0rZYxRv8xFYh9Wzcv6yaSjtpWBhllZ4Gdjfv2FDbM9BbLw_u4We3aEttKwv-U66vu5bzg5oOONZi_R51kA2uKTkxAwmcZxuFy1 "The full UML Diagram for the KarmaPlatform")
 
-class KarmaPlatform extends JPanel implements KeyListener{
-  +createScene()
-  +input()
-  +update(d:long)
-  +draw()
-  -init(args:String[])
-  -dispose()
-  -loop()
-}
-package JDK{
-}
-show KarmaPlatform methods 
-enum EntityType
-class Entity
-class World
-class GridObject extends Entity
-class TextObject extends Entity
-interface Behavior
-interface Scene
-class SceneManager
-class AbstractScene implements Scene
-
-AbstractScene "1" --> "n" Entity:entities
-AbstractScene -> World:world
-AbstractScene "1"-->"n" Behavior:behaviors
-Entity "1" -> "n" Behavior:behaviors
-Entity -> EntityType:type
-KarmaPlatform --> BufferedImage:buffer
-KarmaPlatform -->  JFrame:frame
-KarmaPlatform --> SceneManager:sceneManager
-SceneManager "1"->"n" Scene:scenes
-
-@enduml
-```
+_figure 1 - The full UML Diagram for the KarmaPlatform_
 
 ## Build
 
@@ -83,9 +46,14 @@ or on linux machine, or git-bash on Windows :
 target/build/Karma-1.0.0.run
 ```
 
+![The latest screenshot from the karma platform](src/docs/illustrations/00-latest.png "This is the latest screenshot from the Karma Platform")
+
+_figure 2 - the latest build of the Karna Platform_
+
 ## Contribute
 
-You can change the source code freely and add/or new build dependencies through the `build/properties` file, see the [build.readme.md](./build.readme.md) file for details.
+You can change the source code freely and add/or new build dependencies through the `build/properties` file, see
+the [build.readme.md](./build.readme.md) file for details.
 
 Enjoy !
 
