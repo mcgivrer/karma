@@ -86,9 +86,9 @@ public class WaterSimulationBehavior implements KarmaPlatform.Behavior<KarmaPlat
             int n = (int) (ce.getSrc().box.getWidth() / (ce.getSrc().box.getWidth() * waveResolution));
             double surface = ce.getPenetrationDepth() * ce.getDst().w;
             KarmaPlatform.Vector2D resultingForce =
-                world.getGravity()
-                    .multiply(-1.0 / ce.getDst().getMass())
-                    .multiply(surface);
+                    world.getGravity()
+                            .multiply(-1.0 / ce.getDst().getMass())
+                            .multiply(surface);
             ce.getDst().addForce(resultingForce);
             Shape s = slices.get(n - 1);
             colors.set(n - 1, Color.LIGHT_GRAY);

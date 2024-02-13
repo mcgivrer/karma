@@ -19,6 +19,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
+import javax.sound.sampled.*;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Main class for project Karma
  *
@@ -44,6 +48,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     private World world;
     private SceneManager sceneManager;
     private SpacePartition spacePartition;
+    private static SoundManager soundManager;
     private boolean testMode;
 
     /**
@@ -260,7 +265,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
          * internal entity counters to feed the id.
          */
         private static long index = 0;
-        long id = index++;
+        public long id = index++;
         public String name;
 
         /*---- Geometric attributes ----*/
@@ -663,6 +668,10 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         public void resetForces() {
             forces.clear();
         }
+
+        public <T> T getAttributeOrDefault(String key, T defaultValue) {
+            return (T) attributes.getOrDefault(key, defaultValue);
+        }
     }
 
     /**
@@ -1055,9 +1064,11 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
         private final Map<String, KarmaPlatform.Entity> entities = new ConcurrentHashMap<>();
         private final KarmaPlatform.World world;
+        protected final KarmaPlatform app;
         private KarmaPlatform.Camera camera;
 
         public AbstractScene(KarmaPlatform app) {
+            this.app = app;
             this.world = app.getWorld();
         }
 
@@ -1284,6 +1295,26 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         default void onCollision(CollisionEvent ce) {
 
         }
+
+        default void onCollisionIn(CollisionEvent ce) {
+
+        }
+
+        default void onCollisionOut(CollisionEvent ce) {
+
+        }
+    }
+
+    /**
+     * the {@link ParticleBehavior} is used to create and animate particles which is an {@link KarmaPlatform.Entity} having such behavior
+     * and a bunch of child {@link KarmaPlatform.Entity} to me managed by the {@link ParticleBehavior} implementation.
+     *
+     * @param <Entity> the parent Entity to act as a particle system and its child entities being the particles.
+     */
+    public interface ParticleBehavior<Entity> extends Behavior<Entity> {
+        default void onCreate(KarmaPlatform a, Entity e) {
+
+        }
     }
 
     public static class Camera extends Entity {
@@ -1324,15 +1355,17 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         }
 
         public void update(double dt) {
-            this.position.x += Math
-                    .ceil((target.position.x + (target.w * 0.5) - ((viewport.getWidth()) * 0.5) - this.position.x)
-                            * tween * Math.min(dt, 10));
-            this.position.y += Math
-                    .ceil((target.position.y + (target.h * 0.5) - ((viewport.getHeight()) * 0.5) - this.position.y)
-                            * tween * Math.min(dt, 10));
+            if (Optional.ofNullable(target).isPresent()) {
+                this.position.x += Math
+                        .ceil((target.position.x + (target.w * 0.5) - ((viewport.getWidth()) * 0.5) - this.position.x)
+                                * tween * Math.min(dt, 10));
+                this.position.y += Math
+                        .ceil((target.position.y + (target.h * 0.5) - ((viewport.getHeight()) * 0.5) - this.position.y)
+                                * tween * Math.min(dt, 10));
 
-            this.viewport.setRect(this.position.x, this.position.y, this.viewport.getWidth(),
-                    this.viewport.getHeight());
+                this.viewport.setRect(this.position.x, this.position.y, this.viewport.getWidth(),
+                        this.viewport.getHeight());
+            }
         }
     }
 
@@ -1408,6 +1441,62 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
 
     /**
+     * The `SoundManager` will help play sound and music as WAV file.
+     * <ul>
+     *     <li>Add sound from file with {@link SoundManager#loadSound(String, String)},</li>
+     *     <li>Play sound with {@link SoundManager#playSound(String)},</li>
+     *     <li>Stop a sound with {@link SoundManager#stopSound(String)},</li>
+     *     <li>Stop All soiund with {@link SoundManager#stopAllSounds()}.</li>
+     * </ul>
+     */
+    public static class SoundManager {
+        private KarmaPlatform app;
+        private Map<String, Clip> soundClips;
+
+        public SoundManager(KarmaPlatform app) {
+            this.app = app;
+            soundClips = new HashMap<>();
+        }
+
+        public void loadSound(String name, String filePath) {
+            try {
+                AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(Objects.requireNonNull(SoundManager.class.getResourceAsStream(filePath)));
+                Clip clip = AudioSystem.getClip();
+                clip.open(audioInputStream);
+                soundClips.put(name, clip);
+            } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+                error("Unable to load sound %s from file %s: %s", name, filePath, e.getMessage());
+            }
+        }
+
+        public void playSound(String name) {
+            Clip clip = soundClips.get(name);
+            if (clip != null) {
+                if (!clip.isRunning())
+                    clip.setFramePosition(0);
+                clip.start();
+            }
+        }
+
+        public void stopSound(String name) {
+            Clip clip = soundClips.get(name);
+            if (clip != null && clip.isRunning()) {
+                clip.stop();
+                clip.setFramePosition(0);
+            }
+        }
+
+        public void stopAllSounds() {
+            for (Clip clip : soundClips.values()) {
+                if (clip.isRunning()) {
+                    clip.stop();
+                    clip.setFramePosition(0);
+                }
+            }
+        }
+    }
+
+    /**
      * ---- Where everything start ----
      */
 
@@ -1432,6 +1521,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
     }
 
     /**
+     * 0
      * Initialization of the Application by parsing the CLI arguments.
      *
      * @param args list of command line arguments.
@@ -1456,7 +1546,10 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         // Prepare drawing buffer.
         buffer = new BufferedImage(resSize.width, resSize.height, BufferedImage.TYPE_4BYTE_ABGR);
 
+        // prepare Space partitioning
         spacePartition = new SpacePartition(this);
+        // prepare sound manager
+        soundManager = new SoundManager(this);
     }
 
 
@@ -1557,6 +1650,17 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
                         updateEntity(d, e);
                     }
+                    // update the entity (lifetime and active status)
+                    e.update(d);
+                    // apply possible behavior#update
+                    if (!e.getBehaviors().isEmpty()) {
+                        e.getBehaviors().forEach(b -> {
+                            b.onUpdate(this, e, d);
+                            e.updateBox();
+                        });
+                    }
+                    // update the bounding box for that entity
+                    e.updateBox();
                 });
         sceneManager.getCurrent().update(this, d);
         Camera cam = sceneManager.getCurrent().getCamera();
@@ -1614,13 +1718,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
             // Update the bounding box.
             entity.updateBox();
-            // apply possible behavior#update
-            if (!entity.getBehaviors().isEmpty()) {
-                entity.getBehaviors().forEach(b -> {
-                    b.onUpdate(this, entity, d);
-                    entity.updateBox();
-                });
-            }
+
             // keep entity in the KarmaApp area
             keepInPlayArea(world, entity);
             // update the box for the entity.
@@ -1691,19 +1789,21 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      * @param d the elapsed tie since the previous call.
      */
     private void detectCollision(World w, Entity e, double d) {
-        Collection<Entity> entities = sceneManager.getCurrent().getEntities();
-        // TODO: broad phase detect Entity at proximity cell through a Quadtree
-        List<Entity> collisionList = new CopyOnWriteArrayList<>();
-        spacePartition.find(collisionList, e);
-        collisionCounter = 0;
-        e.clearRegisteredCollisions();
-        collisionList.forEach(o -> {
-            if (e.isActive() && !o.equals(e) && o.isActive()
-                    && !o.getPhysicType().equals(PhysicType.NONE)) {
-                collisionCounter++;
-                handleCollision(e, o);
-            }
-        });
+        if (Optional.ofNullable(sceneManager).isPresent()) {
+            Collection<Entity> entities = sceneManager.getCurrent().getEntities();
+            // TODO: broad phase detect Entity at proximity cell through a Quadtree
+            List<Entity> collisionList = new CopyOnWriteArrayList<>();
+            spacePartition.find(collisionList, e);
+            collisionCounter = 0;
+            e.clearRegisteredCollisions();
+            collisionList.forEach(o -> {
+                if (e.isActive() && !o.equals(e) && o.isActive()
+                        && !o.getPhysicType().equals(PhysicType.NONE)) {
+                    collisionCounter++;
+                    handleCollision(e, o);
+                }
+            });
+        }
     }
 
     /**
@@ -2076,9 +2176,13 @@ public class KarmaPlatform extends JPanel implements KeyListener {
             });
         }
         // drawing some debug information.
-        if (isDebugGreaterThan(1)) {
+        if (isDebugGreaterThan(1) && isNotDebugFiltered(e.name)) {
             drawDebugEntity(g, e);
         }
+    }
+
+    private boolean isNotDebugFiltered(String name) {
+        return getDebugEntityFilteredName().contains(name);
     }
 
     private static void drawDebugEntity(Graphics2D g, Entity e) {
@@ -2212,7 +2316,8 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      */
     public void dispose() {
         info("End of karmaApp Wind");
-        if (Optional.ofNullable(sceneManager.getCurrent()).isPresent()) {
+        if (Optional.ofNullable(sceneManager).isPresent()
+                && Optional.ofNullable(sceneManager.getCurrent()).isPresent()) {
             sceneManager.getCurrent().dispose(this);
         }
         if (Optional.ofNullable(frame).isPresent()) {
@@ -2412,6 +2517,10 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
     public Configuration getConfiguration() {
         return config;
+    }
+
+    public static SoundManager getSoundManager() {
+        return soundManager;
     }
 
     public int getDebugLevel() {

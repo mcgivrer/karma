@@ -14,46 +14,9 @@ A game oriented java project proposing basic implementation for
 
 The project is composed of one main class `KarmaPlatform` that contains subclasses.
 
-```plantuml
-@startuml
-!theme plain
-hide methods
-hide attributes
+![The UML class diagram](http://www.plantuml.com/plantuml/png/VPBFZjCm4CRlVWhJKn4g4bSVqB9QGBGWAkrA7127IJn93FuJUIQK2ksxuzYfDadHNjAPRtupOt_k3J547fmLBxX3XxAtOBpeZ4RfaBkWgIJ074qrC98GFTI_e4Mvlply5L8QpnWRg54UyFpP4AF7kD3tH_1enQEeBH390qG7HmlSXEWa_aaDciPfhmieZUijElHSrDdOST-hEY8mtjT9sBuS1UFxWKiuz3hLjbhPuDkiw0YdNDiPRtWBiILrpz7uzlkFB6j3VI0iZ0sXJz6Ze2wSLYUT3942_U3aUy-6pm_d7ikr9c5AleLezHH_Z4P_hNvYpTDbL-n3Kf-htndY8LRWQrm3JnxVOWU_JOWpwGYHJMtnKheq_u_DRfPz9Vu27bgCa_Ik8evGSoxDtsVH5mQlBtrYsR9viv6xtLkvyPlfx0h77uEq8XEKpLEdR66ES-lC1gMVOhhUbEXnp-MQgfe24cNro8nxdeKIC7jZnUaZbl-71DmEJOCHzIS7BQegPzUKt7-8u50rutTTJlMvuOfcoJMxC5dHml7vc6n3TY6hPIg96_HwSFOV "The full UML Diagram for the KarmaPlatform")
 
-class KarmaPlatform extends JPanel implements KeyListener{
-  +createScene()
-  +input()
-  +update(d:long)
-  +draw()
-  -init(args:String[])
-  -dispose()
-  -loop()
-}
-package JDK{
-}
-show KarmaPlatform methods 
-enum EntityType
-class Entity
-class World
-class GridObject extends Entity
-class TextObject extends Entity
-interface Behavior
-interface Scene
-class SceneManager
-class AbstractScene implements Scene
-
-AbstractScene "1" --> "n" Entity:entities
-AbstractScene -> World:world
-AbstractScene "1"-->"n" Behavior:behaviors
-Entity "1" -> "n" Behavior:behaviors
-Entity -> EntityType:type
-KarmaPlatform --> BufferedImage:buffer
-KarmaPlatform -->  JFrame:frame
-KarmaPlatform --> SceneManager:sceneManager
-SceneManager "1"->"n" Scene:scenes
-
-@enduml
-```
+_figure 1 - The full UML Diagram for the KarmaPlatform_
 
 ## Build
 
@@ -83,9 +46,14 @@ or on linux machine, or git-bash on Windows :
 target/build/Karma-1.0.0.run
 ```
 
+![The latest screenshot from the karma platform](src/docs/illustrations/00-latest.png "This is the latest screenshot from the Karma Platform")
+
+_figure 2 - the latest build of the Karna Platform_
+
 ## Contribute
 
-You can change the source code freely and add/or new build dependencies through the `build/properties` file, see the [build.readme.md](./build.readme.md) file for details.
+You can change the source code freely and add/or new build dependencies through the `build/properties` file, see
+the [build.readme.md](./build.readme.md) file for details.
 
 Enjoy !
 
