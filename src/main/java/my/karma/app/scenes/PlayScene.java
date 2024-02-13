@@ -28,13 +28,16 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
 
     @Override
     public void create(KarmaPlatform app) {
+
         KarmaPlatform.World w = getWorld();
+
         w.addDisturbance((KarmaPlatform.Disturbance)
                 new KarmaPlatform.Disturbance("wind")
                         .setPosition(0, 0)
                         .setSize(w.getPlayArea().getWidth(), w.getPlayArea().getHeight() * 0.8)
                         .addForce(new KarmaPlatform.Vector2D(0.0002, 0.0))
         );
+
         w.addDisturbance((KarmaPlatform.Disturbance)
                 new KarmaPlatform.Disturbance("mag")
                         .setPosition(0, 0)
@@ -200,11 +203,13 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
                 .setStatic(true);
         addEntity(heartTxt);
 
+        /*
         KarmaPlatform.GridObject go = (KarmaPlatform.GridObject) new KarmaPlatform.GridObject("grid")
                 .setStrokeSize(0.5f)
                 .setPriority(-10)
                 .setForegroundColor(new Color(0.5f, 0.5f, 0.5f, 0.5f));
         addEntity(go);
+         */
     }
 
     private void generateNRJBalls(String entityRootName, int nbBalls) {
