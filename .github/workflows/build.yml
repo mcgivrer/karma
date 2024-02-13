@@ -1,6 +1,6 @@
 ## see gitea action here for referecnces: https://gitea.com/actions
 name: Gitea Actions Java Build
-run-name: ${{ gitea.actor }} is testing out Gitea Actions 🚀
+run-name: ${{ github.actor }} is testing out Gitea Actions 🚀
 on: [push]
 
 jobs:
