@@ -48,7 +48,7 @@ public class KarmaConfigTest {
     @Test
     @Order(4)
     public void configurationHasPhysicProperties() {
-        config.load("/test-physic-config.properties");
+        config.load("/test-config.properties");
         Assertions.assertEquals(
                 app.getWorld()
                         .getPlayArea(),

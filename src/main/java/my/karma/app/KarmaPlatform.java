@@ -1424,7 +1424,7 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         public boolean equals(Object obj) {
             CollisionEvent other = (CollisionEvent) obj;
             return (other.getDst().equals(this.getDst()) && this.getSrc().equals(other.getSrc()))
-                || (this.getSrc().equals(other.getDst()) && this.getDst().equals(other.getSrc()));
+                    || (this.getSrc().equals(other.getDst()) && this.getDst().equals(other.getSrc()));
         }
     }
 
@@ -1516,7 +1516,8 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         }
     }
 
-    /**0
+    /**
+     * 0
      * Initialization of the Application by parsing the CLI arguments.
      *
      * @param args list of command line arguments.
@@ -1643,20 +1644,20 @@ public class KarmaPlatform extends JPanel implements KeyListener {
                 .forEach(e -> {
                     if (!e.getPhysicType().equals(PhysicType.NONE)) {
 
-                    updateEntity(d, e);
-                }
-                // update the entity (lifetime and active status)
-                e.update(d);
-                // apply possible behavior#update
-                if (!e.getBehaviors().isEmpty()) {
-                    e.getBehaviors().forEach(b -> {
-                        b.onUpdate(this, e, d);
-                        e.updateBox();
-                    });
-                }
-                // update the bounding box for that entity
-                e.updateBox();
-            });
+                        updateEntity(d, e);
+                    }
+                    // update the entity (lifetime and active status)
+                    e.update(d);
+                    // apply possible behavior#update
+                    if (!e.getBehaviors().isEmpty()) {
+                        e.getBehaviors().forEach(b -> {
+                            b.onUpdate(this, e, d);
+                            e.updateBox();
+                        });
+                    }
+                    // update the bounding box for that entity
+                    e.updateBox();
+                });
         sceneManager.getCurrent().update(this, d);
         Camera cam = sceneManager.getCurrent().getCamera();
         if (Optional.ofNullable(cam).isPresent()) {
@@ -1699,14 +1700,14 @@ public class KarmaPlatform extends JPanel implements KeyListener {
 
             // compute acceleration for this Entity
             entity.acceleration = entity.acceleration
-                .addAll(entity.forces)
-                .limit(world.getAccelerationMax());
+                    .addAll(entity.forces)
+                    .limit(world.getAccelerationMax());
 
             // Compute velocity based on acceleration of this Entity
             entity.velocity = entity.velocity
-                .add(world.getGravity().multiply(-0.01))
-                .add(entity.acceleration.multiply(d))
-                .limit(world.getVelocityMax());
+                    .add(world.getGravity().multiply(-0.01))
+                    .add(entity.acceleration.multiply(d))
+                    .limit(world.getVelocityMax());
 
             // Compute position according to velocity
             entity.position = entity.position.add(entity.getVelocity().multiply(d));
@@ -1784,19 +1785,21 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      * @param d the elapsed tie since the previous call.
      */
     private void detectCollision(World w, Entity e, double d) {
-        Collection<Entity> entities = sceneManager.getCurrent().getEntities();
-        // TODO: broad phase detect Entity at proximity cell through a Quadtree
-        List<Entity> collisionList = new CopyOnWriteArrayList<>();
-        spacePartition.find(collisionList, e);
-        collisionCounter = 0;
-        e.clearRegisteredCollisions();
-        collisionList.forEach(o -> {
-            if (e.isActive() && !o.equals(e) && o.isActive()
-                    && !o.getPhysicType().equals(PhysicType.NONE)) {
-                collisionCounter++;
-                handleCollision(e, o);
-            }
-        });
+        if (Optional.ofNullable(sceneManager).isPresent()) {
+            Collection<Entity> entities = sceneManager.getCurrent().getEntities();
+            // TODO: broad phase detect Entity at proximity cell through a Quadtree
+            List<Entity> collisionList = new CopyOnWriteArrayList<>();
+            spacePartition.find(collisionList, e);
+            collisionCounter = 0;
+            e.clearRegisteredCollisions();
+            collisionList.forEach(o -> {
+                if (e.isActive() && !o.equals(e) && o.isActive()
+                        && !o.getPhysicType().equals(PhysicType.NONE)) {
+                    collisionCounter++;
+                    handleCollision(e, o);
+                }
+            });
+        }
     }
 
     /**
@@ -2131,15 +2134,15 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         gs.fillRect(8, winSize.height + 8, winSize.width, 32);
         gs.setColor(Color.ORANGE);
         gs.drawString(
-            String.format("[ debug: %d | fps:%03d | entity(sta:%d,dyn:%d,non:%d) | active:%d | collision:%d ]",
-                debug,
-                (Integer) stats.getOrDefault("frameRate", 0.0),
-                countStaticEntities,
-                countDynamicEntities,
-                countNoneEntities,
-                countActiveEntities,
-                collidingEventsCount),
-            16, winSize.height + 24);
+                String.format("[ debug: %d | fps:%03d | entity(sta:%d,dyn:%d,non:%d) | active:%d | collision:%d ]",
+                        debug,
+                        (Integer) stats.getOrDefault("frameRate", 0.0),
+                        countStaticEntities,
+                        countDynamicEntities,
+                        countNoneEntities,
+                        countActiveEntities,
+                        collidingEventsCount),
+                16, winSize.height + 24);
     }
 
     /**
@@ -2186,20 +2189,20 @@ public class KarmaPlatform extends JPanel implements KeyListener {
         g.setColor(Color.CYAN);
         Vector2D pos1 = e.getPosition().add(e.getVelocity().multiply(100.0).add(new Vector2D(e.w, e.h).multiply(0.5)));
         g.drawLine(
-            (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
-            (int) pos1.getX(), (int) pos1.getY());
+                (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
+                (int) pos1.getX(), (int) pos1.getY());
         if (isDebugGreaterThan(3)) {
             // draw collision normals
             g.setColor(Color.WHITE);
             e.getCollisions().forEach(ce -> {
                 Vector2D pos2 = ce.getSrc().getPosition()
-                    .add(ce.getNormal()
-                        .multiply(10.0)
-                        .add(new Vector2D(e.w, e.h)
-                            .multiply(0.5)));
+                        .add(ce.getNormal()
+                                .multiply(10.0)
+                                .add(new Vector2D(e.w, e.h)
+                                        .multiply(0.5)));
                 g.drawLine(
-                    (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
-                    (int) pos2.getX(), (int) pos2.getY());
+                        (int) (e.getPosition().x + e.w * 0.5), (int) (e.getPosition().y + e.h * 0.5),
+                        (int) pos2.getX(), (int) pos2.getY());
             });
         }
         g.setStroke(new BasicStroke(1.0f));
@@ -2305,7 +2308,8 @@ public class KarmaPlatform extends JPanel implements KeyListener {
      */
     public void dispose() {
         info("End of karmaApp Wind");
-        if (Optional.ofNullable(sceneManager.getCurrent()).isPresent()) {
+        if (Optional.ofNullable(sceneManager).isPresent()
+                && Optional.ofNullable(sceneManager.getCurrent()).isPresent()) {
             sceneManager.getCurrent().dispose(this);
         }
         if (Optional.ofNullable(frame).isPresent()) {
