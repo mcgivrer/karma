@@ -7,7 +7,7 @@ jobs:
   Build-Karma-Project:
     runs-on: ubuntu-latest
     steps:
-      - uses: https://github.com/actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: Build project with JDK over Xvfb
         run: |
          apt update -y
@@ -23,7 +23,7 @@ jobs:
          #/root/.sdkman/candidates/maven/current/mvn -B package -DskipTests=true --file pom.xml
          chmod +x ./build.sh
          ./build.sh a
-# use of upload artifacts : https://github.com/actions/upload-artifact
+# use of upload artifacts : actions/upload-artifact
 #      - uses: actions/upload-artifact@v3
 #        with:
 #          name: Karma
