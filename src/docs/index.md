@@ -2,7 +2,7 @@
 
 The KarmaPlatform is a compact and easy to user 2D platform framework to defvelop very si;ple game with the JDK only.
 
-![a simple 2D demo example](illustrations/08-add_platform-01.png "a simple 2D demo example")
+![a simple 2D demo example](illustrations/00-latest.png "a simple 2D demo example")
 
 0. [Introduction](00-introduction.md)
 1. [Main class Application](01-main_class_app.md)

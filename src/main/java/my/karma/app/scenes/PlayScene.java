@@ -70,18 +70,6 @@ public class PlayScene extends KarmaPlatform.AbstractScene {
         addEntity(player);
         cam.setTarget(player);
 
-
-        KarmaPlatform.Entity particleSystem = new KarmaPlatform.Entity("starfield")
-                .setPhysicType(KarmaPlatform.PhysicType.NONE)
-                .setPriority(-20)
-                .setPosition(0, 0)
-                .setStatic(true)
-                .setForegroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f))
-                .setBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f))
-                .setSize(app.getScreenSize().getWidth(), app.getScreenSize().getHeight())
-                .addBehavior(new StarFieldParticleBehavior(player, 0.0005, 50, 30));
-        addEntity(particleSystem);
-
         // Add some enemies.
         generateNRJBalls("ball", 20);
 
