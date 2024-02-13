@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: https://github.com/actions/checkout@v3
-      - name: Build project with Maven and Xvfb
+      - name: Build project with JDK over Xvfb
         run: |
          apt update -y
          apt -y install xvfb curl zip unzip xsltproc
