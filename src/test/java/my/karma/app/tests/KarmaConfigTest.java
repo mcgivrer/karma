@@ -1,5 +1,7 @@
 package my.karma.app.tests;
 
+import my.karma.app.ConfigService;
+import my.karma.app.KConfigAttr;
 import my.karma.app.KarmaPlatform;
 import my.karma.app.tests.scenes.TestScene;
 
@@ -17,112 +19,108 @@ import java.util.Optional;
 @Suite(failIfNoTests = false)
 public class KarmaConfigTest {
     static KarmaPlatform app;
-    static KarmaPlatform.Configuration config;
+    static ConfigService config;
 
     @BeforeAll
     public static void setup() {
         app = new KarmaPlatform("/test-config.properties");
-        config = new KarmaPlatform.Configuration(app);
+        config = new ConfigService(KConfigAttr.values());
     }
 
     @Test
     @Order(1)
     public void configurationHasProperties() {
-        Assertions.assertNotNull(config.getProperties());
+        Assertions.assertNotNull(ConfigService.getAttributes());
     }
 
     @Test
     @Order(2)
     public void configurationHasExitMode() {
-        config.parseArguments(List.of("app.exit=true"));
-        Assertions.assertTrue(app.isExit(), "Configuration has no exit mode");
+        config.parseArguments(List.of("exit=true"));
+        boolean exit = ConfigService.get(KConfigAttr.APP_EXIT);
+        Assertions.assertTrue(exit, "Configuration has no exit mode");
     }
 
     @Test
     @Order(3)
     public void configurationHasTestMode() {
-        config.parseArguments(List.of("app.test.mode=true"));
-        Assertions.assertTrue(app.isTestMode(), "Configuration has no test mode");
+        config.parseArguments(List.of("mode=true"));
+        boolean testMode = ConfigService.get(KConfigAttr.TEST_MODE);
+        Assertions.assertTrue(testMode, "Configuration has no test mode");
     }
 
     @Test
     @Order(4)
     public void configurationHasPhysicProperties() {
-        config.load("/test-config.properties");
+        config.loadFrom("/test-config.properties");
         Assertions.assertEquals(
-                app.getWorld()
-                        .getPlayArea(),
-                new Rectangle2D.Double(0.0, 0.0, 800.0, 600.0),
-                "Configuration has no Play area defined !");
+            new Rectangle2D.Double(0.0, 0.0, 800.0, 600.0),
+            ConfigService.get(KConfigAttr.WORLD_PLAY_AREA),
+            "Configuration has no Play area defined !");
         Assertions.assertEquals(
-                app.getWorld()
-                        .getGravity(),
-                new KarmaPlatform.Vector2D(0.0, -0.00981),
-                "Configuration has no gravity defined !");
+            new KarmaPlatform.Vector2D(0.0, -0.00981),
+            ConfigService.get(KConfigAttr.WORLD_GRAVITY),
+            "Configuration has no gravity defined !");
         Assertions.assertEquals(
-                app.getWorld()
-                        .getVelocityMax(),
-                new KarmaPlatform.Vector2D(0.2, 0.2),
-                "Configuration has no velocity max defined !");
+            new KarmaPlatform.Vector2D(0.2, 0.2),
+            ConfigService.get(KConfigAttr.PHYSIC_VELOCITY_MAX),
+            "Configuration has no velocity max defined !");
         Assertions.assertEquals(
-                app.getWorld()
-                        .getAccelerationMax(),
-                new KarmaPlatform.Vector2D(0.012, 0.012),
-                "Configuration has no acceleration max defined !");
+            new KarmaPlatform.Vector2D(0.012, 0.012),
+            ConfigService.get(KConfigAttr.PHYSIC_ACCELERATION_MAX),
+            "Configuration has no acceleration max defined !");
+        Assertions.assertEquals(5,
+            (int) ConfigService.get(KConfigAttr.PHYSIC_PARTITION_MAX_LEVEL),
+            "Configuration has no partitioning max level defined !");
         Assertions.assertEquals(
-                app.getWorld()
-                        .getPartitioningLevelMax(), 5,
-                "Configuration has no partitioning max level defined !");
-        Assertions.assertEquals(
-                app.getWorld()
-                        .getPartitioningCellPerLevel(), 5,
-                "Configuration has no max number of cells in a partition defined !");
+            5,
+            (int) ConfigService.get(KConfigAttr.PHYSIC_PARTITION_MAX_CELL_PER_LEVEL),
+            "Configuration has no max number of cells in a partition defined !");
     }
 
     @Test
     @Order(5)
     public void configurationHasDebugProperties() {
-        config.load("/test-debug-config.properties");
-        Assertions.assertEquals(4, app.getDebugLevel());
-        Assertions.assertEquals("filtered,entities,names", app.getDebugEntityFilteredName());
+        config.loadFrom("/test-debug-config.properties");
+        Assertions.assertEquals(4, (int) ConfigService.get(KConfigAttr.DEBUG_LEVEL));
+        Assertions.assertEquals("filtered,entities,names", ConfigService.get(KConfigAttr.DEBUG_FILTER));
     }
 
     @Test
     @Order(6)
     public void configurationHasRenderingProperties() {
-        config.load("/test-render-config.properties");
+        config.loadFrom("/test-render-config.properties");
         Assertions.assertEquals(
-                new Dimension(640, 400),
-                app.getWindowSize(),
-                "Configuration has no window size set");
+            new Dimension(640, 400),
+            ConfigService.get(KConfigAttr.APP_WINDOW_SIZE),
+            "Configuration has no window size set");
         Assertions.assertEquals(
-                new Dimension(320, 200),
-                app.getScreenSize(),
-                "Configuration has no rendering buffer set");
+            new Dimension(320, 200),
+            ConfigService.get(KConfigAttr.RENDERING_BUFFER_SIZE),
+            "Configuration has no rendering buffer set");
         Assertions.assertEquals(
-                3,
-                app.getStrategyBufferNb(),
-                "Configuration has no buffer strategy set");
+            3,
+            (int) ConfigService.get(KConfigAttr.RENDERING_BUFFER_STRATEGY),
+            "Configuration has no buffer strategy set");
     }
 
     @Test
     @Order(7)
     public void configurationHasSceneProperties() {
 
-        config.load("/test-scene-config.properties");
+        config.loadFrom("/test-scene-config.properties");
         //# App scenes list and default.
         //app.scenes.list=test:my.karma.app.tests.scenes.TestScene,
         //app.scenes.default=test
         Assertions.assertEquals(
-                "test",
-                app.getSceneManager().getDefaultSceneName(),
-                "Configuration has no default Scene name set");
-        List<KarmaPlatform.Scene> list = List.of(new TestScene(app));
-        Optional<KarmaPlatform.Scene> propScene = app.getSceneManager().getScenes()
-                .stream().filter(s -> s.getName().equals("test"))
-                .findFirst();
+            "test",
+            ConfigService.get(KConfigAttr.APP_SCENE_DEFAULT),
+            "Configuration has no default Scene name set");
+        String[] scenes = ConfigService.get(KConfigAttr.APP_SCENES_LIST);
         Assertions.assertEquals(
-                list.getFirst().getName(), propScene.get().getName(),
-                "Configuration has no Scene list set");
+            "test:my.karma.app.tests.scenes.TestScene",
+            scenes[0],
+            "Configuration has no default Scene name set");
+
     }
 }

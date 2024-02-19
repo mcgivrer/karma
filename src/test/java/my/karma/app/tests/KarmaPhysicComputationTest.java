@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.awt.geom.Rectangle2D;
+
 public class KarmaPhysicComputationTest {
     KarmaPlatform app;
     KarmaPlatform.Entity e1;
@@ -13,6 +15,7 @@ public class KarmaPhysicComputationTest {
     @BeforeEach
     public void setup() {
         app = new KarmaPlatform("/test-physic-config.properties");
+        app.init(new String[]{});
     }
 
     @AfterEach
@@ -23,8 +26,12 @@ public class KarmaPhysicComputationTest {
 
     @Test
     public void entityPhysicIsUpdatedTest() {
+        app.getSceneManager().start("test");
         e1 = new KarmaPlatform.Entity("Test");
-        e1.setPosition(app.getWorld().getPlayArea().getX(), app.getWorld().getPlayArea().getY())
+
+        KarmaPlatform.World world = app.getWorld();
+        Rectangle2D playArea = world.getPlayArea();
+        e1.setPosition(playArea.getX(), playArea.getY())
             .setSize(32, 32);
         app.updateEntity(10.0, e1);
         Assertions.assertEquals(e1.getPosition().getX(), app.getWorld().getPlayArea().getX());
