@@ -1,5 +1,7 @@
 # README
 
+[![Build](https://github.com/mcgivrer/karma/actions/workflows/build.yml/badge.svg)](https://github.com/mcgivrer/karma/actions/workflows/build.yml) [![CodeQL](https://github.com/mcgivrer/karma/actions/workflows/codeql.yml/badge.svg)](https://github.com/mcgivrer/karma/actions/workflows/codeql.yml) [![Deploy GitHub Pages](https://github.com/mcgivrer/karma/actions/workflows/jekyll-gh-pages.yml/badge.svg)](https://github.com/mcgivrer/karma/actions/workflows/jekyll-gh-pages.yml)
+
 ## Context
 
 This is the readme file for **Karma (1.0.4)** project.
@@ -55,7 +57,7 @@ _figure 2 - the latest build of the Karna Platform_
 You can change the source code freely and add/or new build dependencies through the `build/properties` file, see
 the [build.readme.md](./build.readme.md) file for details.
 
-![RepoBeats analytics](https://repobeats.axiom.co/api/embed/3700d019258205e1470117ea5f5d4b870d704ce0.svg "Repobeats analytics image")
+![Alt](https://repobeats.axiom.co/api/embed/3700d019258205e1470117ea5f5d4b870d704ce0.svg "Repobeats analytics image on karma/develop")
 
 Enjoy !
 

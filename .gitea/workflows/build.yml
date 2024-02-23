@@ -8,12 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: https://github.com/actions/checkout@v3
-#      - uses: https://github.com/actions/setup-java@v3
-#        with:
-#          distribution: "zulu" # See 'Supported distributions' for available options
-#          java-version: "20"
-#          cache: 'maven'
-      - name: Build project with Maven and Xvfb
+      - name: Build project with JDK over Xvfb
         run: |
          apt update -y
          apt -y install xvfb curl zip unzip xsltproc
