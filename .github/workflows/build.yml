@@ -1,4 +1,4 @@
-name: Building the Java project with customscript
+name: Java build
 run-name: ${{ github.actor }} is testing out Gitea Actions 🚀
 on: [push]
 
@@ -6,19 +6,16 @@ jobs:
   Build-Java-Project:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.1.1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: "zulu" # See 'Supported distributions' for available options
+          java-version: "21"
       - name: Build project with custom script and Xvfb
         run: |
-          apt update -y
-          apt -y install xvfb curl zip unzip xsltproc
+          sudo apt-get install xvfb
           export DISPLAY=":99.0"
           export AUDIODEV=null
           xvfb-run :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-          curl -s "https://get.sdkman.io" | bash
-          source "/root/.sdkman/bin/sdkman-init.sh"
-          sdk env install
-          sdk env use
-          chmod a+x "$HOME/.sdkman/bin/sdkman-init.sh"
-          #/root/.sdkman/candidates/maven/current/mvn -B package -DskipTests=true --file pom.xml
           chmod +x ./build.sh
           ./build.sh a
