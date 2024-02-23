@@ -1,4 +1,4 @@
-name: Building the Java project with customscript
+name: Java build
 run-name: ${{ github.actor }} is testing out Gitea Actions 🚀
 on: [push]
 
