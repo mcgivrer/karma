@@ -87,7 +87,7 @@ target/build/Karma-1.0.0.run
 
 You can change the source code freely and add/or new build dependencies through the `build/properties` file, see the [build.readme.md](./build.readme.md) file for details.
 
-![The RepoBeats statistics](https://repobeats.axiom.co/api/embed/fba6f0b8b964550bc9c1dd5af0d4a20f5f7edd39.svg "Repobeats analytics image")
+![Alt](https://repobeats.axiom.co/api/embed/3700d019258205e1470117ea5f5d4b870d704ce0.svg "Repobeats analytics image on karma/develop")
 
 Enjoy !
 
